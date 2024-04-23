@@ -517,9 +517,9 @@ class TestWCTaskSim(TestCase):
         syn_act_oscill = wc_block.generate_neuronal_oscill()
         maxfr = 100
         windowsize = 2;
-        f1, Pxx_Welsh1 = functions.getMeanPowerSpectrum(syn_act_oscill, 0.1, spectrum_windowsize=windowsize, maxfr=maxfr)
+        f1, Pxx_Welsh1 = functions.getMeanPowerSpectrum(syn_act_oscill, 0.1, spectrum_windowsize=windowsize,
+                                                        maxfr=maxfr)
         self.assertEqual(len(f1), len(Pxx_Welsh1))
-
 
     def test_draw_envelope_bold_compare(self):
         sim_parameters = {"delay": 250, "rest_before": True, "first_duration": 4, "last_duration": 4}
@@ -589,6 +589,35 @@ class TestHRF:
         assert type(hrf.BOLD) == np.ndarray
         assert hrf.BOLD.shape == (1, 0)
 
+    def test_create_one_signal(self):
+        onsets = [5]
+        hrf = HRF(10, dt=10, TR=0.01, normalize_max=0.2)
+        local_activation = hrf.create_task_design_activation(onsets, duration=3, first_rest=5, last_rest=5)
+        plt.subplot(121);
+        plt.plot(local_activation[0])
+        plt.subplot(122);
+        plt.plot(local_activation[1])
+        plt.show()
+        assert local_activation.shape[0] == 2
+
+    def test_convolve_one_signal(self):
+        onsets = [5]
+        hrf = HRF(10, dt=10, TR=0.01, normalize_max=0.2)
+        local_activation = hrf.create_task_design_activation(onsets,
+                                                             duration=3, first_rest=5, last_rest=5)
+        bw_params = {"rho": 0.34,
+                     "alpha": 0.32,
+                     "V0": 0.02,
+                     "k1_mul": None,
+                     "k2": None, "k3_mul": None, "gamma": None, "k": None, "tau": None}
+        hrf.bw_convolve(local_activation, append=False, **bw_params)
+        plt.subplot(121);
+        plt.plot(local_activation[0, :])
+        plt.subplot(122);
+        plt.plot(hrf.BOLD[0, :])
+        plt.show()
+        assert True
+
     def test_create_task_design_activation(self):
         onsets = [[5, 15, 25], [2, 8, 10]]
         hrf = HRF(2, dt=10, TR=0.01, normalize_max=0.2)
@@ -615,7 +644,10 @@ class TestHRF:
         hrf = HRF(2, dt=10, TR=1, normalize_input=True, normalize_max=0.2)
         local_activation = hrf.create_task_design_activation(onsets, duration=2,
                                                              first_rest=first_rest, last_rest=5)
-        bw_params = {"rho": 0.34, "alpha": 0.32, "V0": 0.02, "k1_mul": None,
+        bw_params = {"rho": 0.34,
+                     "alpha": 0.32,
+                     "V0": 0.02,
+                     "k1_mul": None,
                      "k2": None, "k3_mul": None, "gamma": None, "k": None, "tau": None}
         hrf.bw_convolve(local_activation, append=False, **bw_params)
         plt.subplot(121);

@@ -905,7 +905,6 @@ class HRF:
                                       duration,
                                       first_rest=5,
                                       last_rest=5):
-        # TODO delete this function
         """
         Create external activation separately for each region
         Args:
@@ -952,22 +951,22 @@ class HRF:
         )
         return t_resampled, signal_resampled
 
-    def bw_convolve(self, activity, append=False, **kwargs):
+    def bw_convolve(self, activity, append=False,
+                    fix=True, **kwargs):
         assert activity.shape[0] == self.N, "Input shape must be equal to Number of activations to times"
         if self.normalize_input:
             activity = self.normalize_max * activity
 
             # Compute the BOLD signal for the chunk
-        BOLD_chunk, self.X_BOLD, self.F_BOLD, self.Q_BOLD, self.V_BOLD = simulateBOLD(
-            activity,
-            self.dt * 1e-3,
-            10000 * np.ones((self.N,)),
-            X=self.X_BOLD,
-            F=self.F_BOLD,
-            Q=self.Q_BOLD,
-            V=self.V_BOLD,
-            **kwargs
-        )
+        BOLD_chunk, self.X_BOLD, self.F_BOLD, self.Q_BOLD, self.V_BOLD = simulateBOLD(activity,
+                                                                                      self.dt * 1e-3,
+                                                                                      10000 * np.ones((self.N,)),
+                                                                                      X=self.X_BOLD,
+                                                                                      F=self.F_BOLD,
+                                                                                      Q=self.Q_BOLD,
+                                                                                      V=self.V_BOLD,
+                                                                                      fix=fix,
+                                                                                      **kwargs)
 
         t_BOLD_resampled, BOLD_resampled = self.resample_to_TR(BOLD_chunk, idxLastT=self.idxLastT)
 

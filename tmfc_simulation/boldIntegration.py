@@ -2,8 +2,23 @@ import numpy as np
 import numba
 
 
-def simulateBOLD(Z, dt, voxelCounts, X=None, F=None, Q=None, V=None,
-                 rho=None, alpha=None, V0=None, k1_mul=None, k2=None, k3_mul=None, gamma=None, k=None, tau=None):
+def simulateBOLD(Z,
+                 dt,
+                 voxelCounts=None,
+                 X=None,
+                 F=None,
+                 Q=None,
+                 V=None,
+                 rho=None,
+                 alpha=None,
+                 V0=None,
+                 k1_mul=None,
+                 k2=None,
+                 k3_mul=None,
+                 gamma=None,
+                 k=None,
+                 tau=None,
+                 fix=True):
     """ Adopted function from neurolib, added parameters for the shape of bold activation to the argument,
     the only difference
     https://github.com/neurolib-dev/neurolib/blob/master/neurolib/models/bold/timeIntegration.py
@@ -29,12 +44,14 @@ def simulateBOLD(Z, dt, voxelCounts, X=None, F=None, Q=None, V=None,
 
     :return: BOLD, X, F, Q, V
     :rtype: (numpy.ndarray,)
+
+    Args:
+        fix:
     """
 
     N = np.shape(Z)[0]
 
-    if "voxelCounts" not in globals():
-        voxelCounts = np.ones((N,))
+
 
     # Balloon-Windkessel model parameters (from Friston 2003):
     # Friston paper: Nonlinear responses in fMRI: The balloon model, Volterra kernels, and other hemodynamics
@@ -57,22 +74,42 @@ def simulateBOLD(Z, dt, voxelCounts, X=None, F=None, Q=None, V=None,
     # If no voxel counts are given, we can use scalar values for each region's parameter:
 
     # Capillary resting net oxygen extraction (dimensionless), E_0 in Friston2000
+    if voxelCounts is None:
+        voxelCounts = np.ones((N,))
+    voxelCountsSqrtInv = 1 / np.sqrt(voxelCounts)
     rho = 0.34 if rho is None else rho
+    if fix:
+        Rho = rho*np.ones((N,))
+    else:
+        Rho = np.random.normal(rho, np.sqrt(0.0024) * voxelCountsSqrtInv, size=(N,))
     # Grubb's vessel stiffness exponent (dimensionless), \alpha in Friston2000
     alpha = 0.32 if alpha is None else alpha
+    if fix:
+        Alpha = alpha*np.ones((N,))
+    else:
+        Alpha = np.random.normal(alpha, np.sqrt(0.0015) * voxelCountsSqrtInv, size=(N,))
 
     # Resting blood volume fraction (dimensionless)
     V0 = 0.02 if V0 is None else V0
 
-    k1 = 7 * rho if k1_mul is None else k1_mul*rho # (dimensionless)
+    K1 = 7 * Rho if k1_mul is None else k1_mul*Rho # (dimensionless)
     k2 = 2.0 if k2 is None else k2  # (dimensionless)
-    k3 = 2 * rho - 0.2 if k3_mul is None else k3_mul * rho - 0.2  # (dimensionless)
+    K3 = 2 * Rho - 0.2 if k3_mul is None else k3_mul * Rho - 0.2  # (dimensionless)
     gamma =0.41 if gamma is None else gamma
-    Gamma = gamma * np.ones((N,))  # Rate constant for autoregulatory feedback by blood flow (1/s)
+    if fix:
+        Gamma = gamma * np.ones((N,))  # Rate constant for autoregulatory feedback by blood flow (1/s)
+    else:
+        Gamma = np.random.normal(gamma, np.sqrt(0.002) * voxelCountsSqrtInv, size=(N,))
     k = 0.65 if k is None else k
-    K = k * np.ones((N,))  # Vasodilatory signal decay (1/s)
+    if fix:
+        K = k * np.ones((N,))  # Vasodilatory signal decay (1/s)
+    else:
+        K = np.random.normal(k * np.ones(N), np.sqrt(0.015) * voxelCountsSqrtInv, size=(N,))
     tau = 0.98 if tau is None else tau
-    Tau = tau * np.ones((N,))  # Transit time  (s)
+    if fix:
+        Tau = tau * np.ones((N,))  # Transit time  (s)
+    else:
+        Tau = np.random.normal(tau * np.ones(N), np.sqrt(0.0568) * voxelCountsSqrtInv, size=(N,))
 
     # initialize state variables
     # NOTE: We need to use np.copy() because these variables
@@ -85,12 +122,13 @@ def simulateBOLD(Z, dt, voxelCounts, X=None, F=None, Q=None, V=None,
 
     BOLD = np.zeros(np.shape(Z))
     # return integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N, rho, alpha, V0, k1, k2, k3, Gamma, K, Tau)
-    BOLD, X, F, Q, V = integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N, rho, alpha, V0, k1, k2, k3, Gamma, K, Tau)
+    BOLD, X, F, Q, V = integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N,
+                                           Rho, Alpha, V0, K1, k2, K3, Gamma, K, Tau)
     return BOLD, X, F, Q, V
 
 
-@numba.njit
-def integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N, rho, alpha, V0, k1, k2, k3, Gamma, K, Tau):
+#@numba.njit
+def integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N, Rho, Alpha, V0, K1, k2, K3, Gamma, K, Tau):
     """Integrate the Balloon-Windkessel model.
 
     Reference:
@@ -118,11 +156,11 @@ def integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N, rho, alpha, V0, k1, k2, k3, 
         # component-wise loop for compatibilty with numba
         for j in range(N):  # loop over all areas
             X[j] = X[j] + dt * (Z[j, i] - K[j] * X[j] - Gamma[j] * (F[j] - 1))
-            Q[j] = Q[j] + dt / Tau[j] * (F[j] / rho * (1 - (1 - rho) ** (1 / F[j])) - Q[j] * V[j] ** (1 / alpha - 1))
-            V[j] = V[j] + dt / Tau[j] * (F[j] - V[j] ** (1 / alpha))
+            Q[j] = Q[j] + dt / Tau[j] * (F[j] / Rho[j] * (1 - (1 - Rho[j]) ** (1 / F[j])) - Q[j] * V[j] ** (1 / Alpha[j] - 1))
+            V[j] = V[j] + dt / Tau[j] * (F[j] - V[j] ** (1 / Alpha[j]))
             F[j] = F[j] + dt * X[j]
 
             F[j] = max(F[j], EPS)
 
-            BOLD[j, i] = V0 * (k1 * (1 - Q[j]) + k2 * (1 - Q[j] / V[j]) + k3 * (1 - V[j]))
+            BOLD[j, i] = V0 * (K1[j] * (1 - Q[j]) + k2 * (1 - Q[j] / V[j]) + K3[j] * (1 - V[j]))
     return BOLD, X, F, Q, V
