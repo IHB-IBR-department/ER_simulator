@@ -242,6 +242,7 @@ class TestWCTaskSim(TestCase):
         TR = 2
         duration_rest = 14
         duration_block = 6
+        bw_param = {'rho': (0.35, 0.0024), 'alpha': (0.32, 0.0015)}
         wc_block = WCTaskSim(self.Wij_task_dict,
                              self.Wij_rest,
                              self.D,
@@ -257,7 +258,9 @@ class TestWCTaskSim(TestCase):
         wc_block.generate_bold_chunkwise(TR=2,
                                          input_type=act_type,
                                          normalize_max=2,
-                                         is_first=True)
+                                         is_first=True,
+                                         fix=False,
+                                         **bw_param)
         bold_exc1 = wc_block.BOLD[0, :]
 
         wc_block._generate_single_block(self.Wij_rest,
@@ -300,6 +303,8 @@ class TestWCTaskSim(TestCase):
 
     def test_generate_full_series_two_task(self):
         act_type = 'syn_act'
+        bw_param = {'rho': (0.35, 0.0024), 'alpha': (0.32, 0.0015)}
+
         wc_block = WCTaskSim(self.Wij_task_dict,
                              self.Wij_rest,
                              self.D,
@@ -318,7 +323,9 @@ class TestWCTaskSim(TestCase):
                                       a_s_rate=0.02,
                                       normalize_max=2,
                                       bold_chunkwise=False,
-                                      output_activation=act_type)
+                                      fix_bold=False,
+                                      output_activation=act_type,
+                                      **bw_param)
         self.assertIsNone(wc_block.BOLD)
 
     def test_generate_full_series_two_task_bold_chunkwise(self):
@@ -336,11 +343,15 @@ class TestWCTaskSim(TestCase):
                              bold=False,
                              chunkwise=False)
 
+        bw_param = {'rho': (0.35, 0.0024), 'alpha': (0.32, 0.0015)}
+
         wc_block.generate_full_series(bold_chunkwise=True,
                                       TR=0.75,
                                       activity=True,
                                       a_s_rate=0.02,
                                       normalize_max=2,
+                                      fix_bold=False,
+                                      **bw_param,
                                       output_activation=act_type)
         self.assertIsNotNone(wc_block.BOLD)
 
@@ -413,7 +424,7 @@ class TestWCTaskSim(TestCase):
         TR = 2
         a_s_rate = 5 * 1e-3  # sampling in s, original integration equal to 0.1 ms or 0.0001s
         act_type = 'syn_act'
-        bw_params = {"rho": 0.34, "alpha": 0.32, "V0": 0.02, "k1_mul": None,
+        bw_params = {"rho": 0.34, "alpha": 0.32, "V0": 0.02, "k1_mul": None, 'fix_bold': False,
                      "k2": None, "k3_mul": None, "gamma": None, "k": None, "tau": None}
         activity = True
 

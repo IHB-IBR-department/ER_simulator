@@ -1,24 +1,25 @@
 import numpy as np
 import numba
+from typing import Optional, Union
 
 
 def simulateBOLD(Z,
                  dt,
-                 voxelCounts=None,
+                 rho: Optional[Union[float, tuple[float,float],list[float,float]]] = None,
+                 alpha:Optional[Union[float, tuple[float,float],list[float,float]]]=None,
+                 gamma: Optional[Union[float, tuple[float,float],list[float,float]]]=None,
+                 k: Optional[Union[float, tuple[float,float],list[float,float]]]=None,
+                 tau: Optional[Union[float, tuple[float,float],list[float,float]]]=None,
                  X=None,
                  F=None,
                  Q=None,
                  V=None,
-                 rho=None,
-                 alpha=None,
                  V0=None,
                  k1_mul=None,
                  k2=None,
                  k3_mul=None,
-                 gamma=None,
-                 k=None,
-                 tau=None,
-                 fix=True):
+                 fix:bool = True,
+                 voxelCounts=None):
     """ Adopted function from neurolib, added parameters for the shape of bold activation to the argument,
     the only difference
     https://github.com/neurolib-dev/neurolib/blob/master/neurolib/models/bold/timeIntegration.py
@@ -77,17 +78,39 @@ def simulateBOLD(Z,
     if voxelCounts is None:
         voxelCounts = np.ones((N,))
     voxelCountsSqrtInv = 1 / np.sqrt(voxelCounts)
-    rho = 0.34 if rho is None else rho
+
+    #setting parameters
+    if rho is not None:
+        assert isinstance(rho, (float, list, tuple)), \
+            "rho must be float or list or tuple of two floats"
+
+    if rho is None:
+        rho, var_rho = 0.34, 0.0024
+    elif isinstance(rho, float):
+        rho, var_rho = rho, 0.0024
+    else:
+        rho, var_rho = rho[0], rho[1]
+
     if fix:
         Rho = rho*np.ones((N,))
     else:
-        Rho = np.random.normal(rho, np.sqrt(0.0024) * voxelCountsSqrtInv, size=(N,))
+        Rho = np.random.normal(rho, np.sqrt(var_rho) * voxelCountsSqrtInv, size=(N,))
     # Grubb's vessel stiffness exponent (dimensionless), \alpha in Friston2000
-    alpha = 0.32 if alpha is None else alpha
+    if alpha is not None:
+        assert isinstance(alpha, (float, list, tuple)), \
+            "alpha must be float or list or tuple of two floats"
+
+    if alpha is None:
+        alpha, var_alpha = 0.32, 0.0015
+    elif isinstance(alpha, float):
+        alpha, var_alpha = alpha, 0.0015
+    else:
+        alpha, var_alpha = alpha[0], alpha[1]
+
     if fix:
         Alpha = alpha*np.ones((N,))
     else:
-        Alpha = np.random.normal(alpha, np.sqrt(0.0015) * voxelCountsSqrtInv, size=(N,))
+        Alpha = np.random.normal(alpha, np.sqrt(var_alpha) * voxelCountsSqrtInv, size=(N,))
 
     # Resting blood volume fraction (dimensionless)
     V0 = 0.02 if V0 is None else V0
@@ -95,30 +118,65 @@ def simulateBOLD(Z,
     K1 = 7 * Rho if k1_mul is None else k1_mul*Rho # (dimensionless)
     k2 = 2.0 if k2 is None else k2  # (dimensionless)
     K3 = 2 * Rho - 0.2 if k3_mul is None else k3_mul * Rho - 0.2  # (dimensionless)
-    gamma =0.41 if gamma is None else gamma
+
+    # rate of flow dependent elimination
+
+    if gamma is not None:
+        assert isinstance(gamma, (float, list, tuple)), \
+            "rho must be float or list or tuple of two floats"
+    if gamma is None:
+        gamma, var_gamma = 0.41, 0.002
+    elif isinstance(gamma, float):
+        gamma, var_gamma = gamma, 0.002
+    else:
+        gamma, var_gamma = gamma[0], gamma[1]
     if fix:
         Gamma = gamma * np.ones((N,))  # Rate constant for autoregulatory feedback by blood flow (1/s)
     else:
-        Gamma = np.random.normal(gamma, np.sqrt(0.002) * voxelCountsSqrtInv, size=(N,))
-    k = 0.65 if k is None else k
+        Gamma = np.random.normal(gamma, np.sqrt(var_gamma) * voxelCountsSqrtInv, size=(N,))
+
+
+    # rate of signal decay
+    if k is not None:
+        assert isinstance(k, (float, list, tuple)), \
+         "k must be float or list or tuple of two floats"
+
+    if k is None:
+        k, var_k = 0.65, 0.015
+    elif isinstance(k, float):
+        k, var_k  = k, 0.002
+    else:
+        k, var_k = k[0], k[1]
     if fix:
         K = k * np.ones((N,))  # Vasodilatory signal decay (1/s)
     else:
-        K = np.random.normal(k * np.ones(N), np.sqrt(0.015) * voxelCountsSqrtInv, size=(N,))
+        K = np.random.normal(k * np.ones(N), np.sqrt(var_k) * voxelCountsSqrtInv, size=(N,))
+
+    # hemodinamic transit time
+    if tau is not None:
+        assert isinstance(tau, (float, list, tuple)), \
+            "tau must be float or list or tuple of two floats"
+
+    if tau is None:
+        tau, var_tau = 0.98, 0.0568
+    elif isinstance(tau, float):
+        tau, var_tau = tau, 0.0568
+    else:
+        tau, var_tau = tau[0], tau[1]
     tau = 0.98 if tau is None else tau
     if fix:
         Tau = tau * np.ones((N,))  # Transit time  (s)
     else:
-        Tau = np.random.normal(tau * np.ones(N), np.sqrt(0.0568) * voxelCountsSqrtInv, size=(N,))
+        Tau = np.random.normal(tau * np.ones(N), np.sqrt(var_tau) * voxelCountsSqrtInv, size=(N,))
 
     # initialize state variables
     # NOTE: We need to use np.copy() because these variables
     # will be overwritten later and numba doesn't like to do that
     # with anything that was defined outside the scope of the @njit'ed function
     X = np.zeros((N,)) if X is None else np.copy(X)  # Vasso dilatory signal
-    F = np.zeros((N,)) if F is None else np.copy(F)  # Blood flow
-    Q = np.zeros((N,)) if Q is None else np.copy(Q)  # Deoxyhemoglobin
-    V = np.zeros((N,)) if V is None else np.copy(V)  # Blood volume
+    F = np.ones((N,)) if F is None else np.copy(F)  # Blood flow
+    Q = np.ones((N,)) if Q is None else np.copy(Q)  # Deoxyhemoglobin
+    V = np.ones((N,)) if V is None else np.copy(V)  # Blood volume
 
     BOLD = np.zeros(np.shape(Z))
     # return integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N, rho, alpha, V0, k1, k2, k3, Gamma, K, Tau)
@@ -127,7 +185,7 @@ def simulateBOLD(Z,
     return BOLD, X, F, Q, V
 
 
-#@numba.njit
+@numba.njit
 def integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N, Rho, Alpha, V0, K1, k2, K3, Gamma, K, Tau):
     """Integrate the Balloon-Windkessel model.
 

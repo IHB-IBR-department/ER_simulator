@@ -401,6 +401,7 @@ class WCTaskSim:
                              normalize_max: float = 2,
                              output_activation: str = 'syn_act',
                              clear_raw: bool = True,
+                             fix_bold=True,
                              **kwargs):
         """
         Function for generation full length activity based on experiment design
@@ -423,6 +424,7 @@ class WCTaskSim:
         # set up bold parameters
         self.output_activation = output_activation
         self.normalize_max = normalize_max
+        self.fix_bold = fix_bold
         self.TR = TR
         if bold_chunkwise:
             self.bold_input_ready = True
@@ -446,6 +448,7 @@ class WCTaskSim:
                                          input_type=self.output_activation,
                                          normalize_max=normalize_max,
                                          is_first=True,
+                                         fix=self.fix_bold,
                                          **kwargs)
 
         for i in range(len(self.onset_time_list)):
@@ -464,6 +467,7 @@ class WCTaskSim:
                                              input_type=self.output_activation,
                                              normalize_max=normalize_max,
                                              is_first=False,
+                                             fix=self.fix_bold,
                                              **kwargs)
             end_time_block = onset_time + duration
             self.time_idxs_dict[task_name].append([round(start_time_block, 3),
@@ -485,6 +489,7 @@ class WCTaskSim:
                                                      input_type=self.output_activation,
                                                      normalize_max=normalize_max,
                                                      is_first=False,
+                                                     fix=self.fix_bold,
                                                      **kwargs)
                     self.time_idxs_dict["Rest"].append([round(start_time_rest, 3),
                                                         round(end_time_rest, 3)])
@@ -497,6 +502,7 @@ class WCTaskSim:
                                                  input_type=self.output_activation,
                                                  normalize_max=normalize_max,
                                                  is_first=False,
+                                                 fix=self.fix_bold,
                                                  **kwargs)
 
             if clear_raw:
@@ -532,6 +538,7 @@ class WCTaskSim:
     def generate_coactivation_by_mat(self,
                                      mat_path,
                                      act_scaling,
+                                     fix_bold=True,
                                      **kwargs):
         """
         Generate outer activation for each node defined with a tasks and activation info, where
@@ -570,7 +577,7 @@ class WCTaskSim:
                                                             last_rest=last_rest)
         activations_by_module = create_activations_per_module(activations,
                                                               box_car_activations)
-        hrf = HRF(self.num_modules, dt=dt, TR=TR, normalize_max=act_scaling)
+        hrf = HRF(self.num_modules, dt=dt, TR=TR, normalize_max=act_scaling, fix=fix_bold)
         hrf.bw_convolve(activations_by_module, append=False, **kwargs)
         t_res_activ, res_activ = hrf.resample_to_TR(activations_by_module)
 
@@ -586,6 +593,7 @@ class WCTaskSim:
                                mat_path,
                                act_scaling=0.5,
                                all_rois=True,
+                               fix_bold=True,
                                **kwargs):
         N = self.wc.params["N"]
         first_rest = self.first_duration
@@ -616,7 +624,7 @@ class WCTaskSim:
                 # onsets.extend([onset_taskB] * (N // self.num_modules))
                 onsets.extend([onset_taskB])
         # hrf = HRF(N, dt=dt, TR=TR, normalize_max=act_scaling)
-        hrf = HRF(self.num_modules, dt=dt, TR=TR, normalize_max=act_scaling)
+        hrf = HRF(self.num_modules, dt=dt, TR=TR, normalize_max=act_scaling, fix=fix_bold)
         local_activation = hrf.create_task_design_activation(onsets,
                                                              duration=task_duration,
                                                              first_rest=first_rest,
@@ -637,11 +645,13 @@ class WCTaskSim:
                                 input_type: str = "syn_act",
                                 normalize_max: float = 2,
                                 is_first: bool = True,
+                                fix:bool = True,
                                 **kwargs):
         """Custom bold signal generation on top of neuronal oscillations with
         user-defined TR and type of bold signal
 
         Args:
+            fix: (bool): is all parametetrs for BW model os fixed with mean, or variable for each node
             is_first (bool): if it the first chunk for generation
             (do not need to init with previous values)
             normalize_max: normalization constant
@@ -672,7 +682,8 @@ class WCTaskSim:
                            dt=dt,
                            TR=TR,
                            normalize_input=True,
-                           normalize_max=normalize_max)
+                           normalize_max=normalize_max,
+                           fix=fix)
 
         if new_exc.shape[1] > chunksize:
             used_last_idxs = int(new_exc.shape[1] - new_exc.shape[1] % chunksize)
@@ -828,6 +839,7 @@ class WCTaskSim:
                       drop_first=12,
                       normalize_max=2,
                       conv_type='BW',
+                      fix=True,
                       **kwargs):
         """
         Generate bold signal on top of bold_input signal
@@ -843,7 +855,7 @@ class WCTaskSim:
         """
 
         N = bold_input.shape[0]
-        hrf = HRF(N, dt=dt, TR=TR, normalize_input=True, normalize_max=normalize_max)
+        hrf = HRF(N, dt=dt, TR=TR, normalize_input=True, normalize_max=normalize_max, fix=fix)
         if conv_type == "BW":
             hrf.bw_convolve(bold_input, append=False, **kwargs)
         elif conv_type == "Gamma":
@@ -867,6 +879,7 @@ class HRF:
         Balloon-Windkessel BOLD simulator class.
         BOLD activity is downsampled according to TR.
         BOLD simulation results are saved in t_BOLD, BOLD instance attributes.
+        parameter fix responsible for the variability parameters
     """
 
     def __init__(self,
@@ -874,12 +887,14 @@ class HRF:
                  dt: float = 10,
                  TR: float = 2,
                  normalize_input: bool = True,
-                 normalize_max: float = 50):
+                 normalize_max: float = 50,
+                 fix: bool = True):
         self.N = N
         self.dt = dt  # in ms
         self.TR = TR  # in seconds
         self.normalize_input = normalize_input
         self.normalize_max = normalize_max
+        self.fix = fix
         self.samplingRate_NDt = int(round(TR * 1000 / dt))
 
         # return arrays
@@ -951,8 +966,10 @@ class HRF:
         )
         return t_resampled, signal_resampled
 
-    def bw_convolve(self, activity, append=False,
-                    fix=True, **kwargs):
+    def bw_convolve(self,
+                    activity,
+                    append=False,
+                    **kwargs):
         assert activity.shape[0] == self.N, "Input shape must be equal to Number of activations to times"
         if self.normalize_input:
             activity = self.normalize_max * activity
@@ -960,12 +977,11 @@ class HRF:
             # Compute the BOLD signal for the chunk
         BOLD_chunk, self.X_BOLD, self.F_BOLD, self.Q_BOLD, self.V_BOLD = simulateBOLD(activity,
                                                                                       self.dt * 1e-3,
-                                                                                      10000 * np.ones((self.N,)),
                                                                                       X=self.X_BOLD,
                                                                                       F=self.F_BOLD,
                                                                                       Q=self.Q_BOLD,
                                                                                       V=self.V_BOLD,
-                                                                                      fix=fix,
+                                                                                      fix=self.fix,
                                                                                       **kwargs)
 
         t_BOLD_resampled, BOLD_resampled = self.resample_to_TR(BOLD_chunk, idxLastT=self.idxLastT)
