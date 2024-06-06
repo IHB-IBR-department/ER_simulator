@@ -60,5 +60,58 @@ class TestBold(TestCase):
         plt.show()
         self.assertTrue(True)
 
+    def test_simulate_bold_random_params(self):
+        normalize_max = 1.0
+        self.activation = normalize_max * self.activation
+        BOLD, X, F, Q, V = simulateBOLD(self.activation,
+                                        self.dt,
+                                        alpha=(0.32, 0.0015),
+                                        fix=False)
+        time = np.linspace(0, self.length, int(self.length / self.dt))
+        time_to_peaks = [time[np.argmax(BOLD[i])] for i in range(self.N)]
+        plt.figure(figsize=(12, 4))
+        plt.subplot(121);
+        plt.plot(time, BOLD.T);
+        plt.title('Bold response for different nodes')
+        plt.subplot(122);
+        plt.hist(time_to_peaks);
+        plt.title('Time to peak distribution')
+        plt.show()
+        self.assertTrue(True)
 
+
+    def test_simulate_bold_all_different(self):
+        normalize_max = 1.0
+        self.activation = normalize_max * self.activation
+        N = np.shape(self.activation)[0]
+        rho, var_rho = 0.34, 0.0024
+        k, var_k = 0.65, 0.015
+        gamma, var_gamma = 0.41, 0.002
+        alpha, var_alpha = 0.32, 0.0015
+        tau, var_tau = 0.98, 0.0568
+        Rho = np.random.normal(rho, np.sqrt(var_rho), size=(N,))
+        Gamma = np.random.normal(gamma, np.sqrt(var_gamma), size=(N,))
+        K = np.random.normal(k, np.sqrt(var_k), size=(N,))
+        Tau = np.random.normal(tau, np.sqrt(var_tau), size=(N,))
+        Alpha = np.random.normal(alpha, np.sqrt(var_alpha), size=(N,))
+
+        BOLD, X, F, Q, V = simulateBOLD(self.activation,
+                                        self.dt,
+                                        rho=Rho,
+                                        alpha=Alpha,
+                                        tau = Tau,
+                                        gamma=Gamma,
+                                        k=K,
+                                        fix=True)
+        time = np.linspace(0, self.length, int(self.length / self.dt))
+        time_to_peaks = [time[np.argmax(BOLD[i])] for i in range(self.N)]
+        plt.figure(figsize=(12, 4))
+        plt.subplot(121);
+        plt.plot(time, BOLD.T);
+        plt.title('Bold response for different nodes')
+        plt.subplot(122);
+        plt.hist(time_to_peaks);
+        plt.title('Time to peak distribution')
+        plt.show()
+        self.assertTrue(True)
 

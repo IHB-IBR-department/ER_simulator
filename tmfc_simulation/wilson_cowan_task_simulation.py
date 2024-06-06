@@ -778,12 +778,16 @@ class WCTaskSim:
 
     def compute_phase_diff(self, series_name='sa_series', low_f=30, high_f=40, return_xr=True):
         activity = self.activity[series_name]
+        act_time = self.activity['t']
         N_ROIs = activity.shape[0]
         s_rate = self.activity["sampling_rate"]
         coeff = 1 / s_rate
         zero_shift = self.time_idxs_dict["Rest"][0][0]
-        len_tasks = np.ceil(coeff * (self.time_idxs_dict["Rest"][-1][1] - zero_shift))
-        assert len_tasks == activity.shape[1], 'Computed length and series len should be equal'
+        len_tasks = int(np.ceil(coeff * (self.time_idxs_dict["Rest"][-1][1] - zero_shift)))
+        assert len_tasks <= activity.shape[1], 'Computed length and series len should be less or equal'
+        if len_tasks < activity.shape[1]:
+            activity = activity[:,:len_tasks]
+            act_time = self.activity['t'][:len_tasks]
         task_type = np.array(['Rest'] * int(len_tasks))
         trial_time_point = -1 + np.zeros(int(len_tasks), dtype=int)
         tasks = ["Task_A", "Task_B"]
@@ -810,7 +814,7 @@ class WCTaskSim:
             # phase_diffs[r, :] = np.exp(1j * (angles[roi_idx1[r], :] - angles[roi_idx2[r], :]))
             phase_diffs[r, :] = angles[roi_idx1[r], :] - angles[roi_idx2[r], :]
         act_dict = {'activity': activity, 'phase_diff': phase_diffs,
-                    'time': self.activity['t'], 's_rate': s_rate, 'task_type': task_type,
+                    'time': act_time, 's_rate': s_rate, 'task_type': task_type,
                     'trial_time': trial_time_point, 'trial_number': trial_number}
         if return_xr:
             act_vars = {'neural_activity': (['region', 'time'], act_dict['activity'],
