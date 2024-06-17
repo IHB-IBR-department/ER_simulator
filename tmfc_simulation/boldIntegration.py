@@ -113,7 +113,7 @@ def simulateBOLD(Z,
     elif len(alpha) == N:
         alpha = np.array(alpha)
     else:
-        raise ValueError("gamma must be float or of two or N floats")
+        raise ValueError("alpha must be float or of two or N floats")
 
     if fix:
         Alpha = alpha*np.ones((N,))
@@ -137,11 +137,12 @@ def simulateBOLD(Z,
     elif isinstance(gamma, float):
         gamma, var_gamma = gamma, 0.002
     elif len(gamma) == 2:
-        alpha, var_alpha = gamma[0], gamma[1]
+        gamma, var_gamma = gamma[0], gamma[1]
     elif len(gamma) == N:
         gamma = np.array(gamma)
     else:
         raise ValueError("Gamma must be float or of two or N floats")
+
     if fix:
         Gamma = gamma * np.ones((N,))  # Rate constant for autoregulatory feedback by blood flow (1/s)
     else:
@@ -157,8 +158,13 @@ def simulateBOLD(Z,
         k, var_k = 0.65, 0.015
     elif isinstance(k, float):
         k, var_k  = k, 0.002
-    else:
+    elif len(k)==2:
         k, var_k = k[0], k[1]
+    elif len(k) == N:
+        k = np.array(k)
+    else:
+        raise ValueError("k must be float or of two or N floats")
+
     if fix:
         K = k * np.ones((N,))  # Vasodilatory signal decay (1/s)
     else:
@@ -173,9 +179,13 @@ def simulateBOLD(Z,
         tau, var_tau = 0.98, 0.0568
     elif isinstance(tau, float):
         tau, var_tau = tau, 0.0568
-    else:
+    elif len(tau) == 2:
         tau, var_tau = tau[0], tau[1]
-    tau = 0.98 if tau is None else tau
+    elif len(tau) == N:
+        tau = np.array(tau)
+    else:
+        raise ValueError("tau must be float or of two or N floats")
+
     if fix:
         Tau = tau * np.ones((N,))  # Transit time  (s)
     else:
