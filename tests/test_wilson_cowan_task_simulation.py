@@ -569,24 +569,67 @@ class TestWCTaskSim(TestCase):
                           "first_duration": 6,
                           "last_duration": 20}
         TR = 2
-        N_ROIs = 30
+        N_ROIs = 40
         # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIXv29.mat"
-        mat_path = '../data/small_01_BLOCK.mat'
+        #mat_path = '../data/small_01_BLOCK.mat'
+        mat_path = '../data/30_BLOCK_[720ms_TR]_[HCP_WM]'
         bw_params = {"rho": 0.34, "alpha": 0.32, "V0": 0.02, "k1_mul": None,
                      "k2": None, "k3_mul": None, "gamma": None, "k": None, "tau": None}
         wc_block = WCTaskSim.from_matlab_structure(mat_path,
                                                    num_regions=N_ROIs,
+                                                   num_modules=4,
                                                    **sim_parameters)
         wc_block.TR = TR
         t_coactiv, coactiv, bold_coactiv = wc_block.generate_coactivations(mat_path,
                                                                            act_scaling=0.5,
                                                                            **bw_params)
         t_coactiv1, coactiv1, bold_coactiv1 = wc_block.generate_coactivation_by_mat(mat_path,
+                                                                                    gen_all_reg=False,
                                                                                     act_scaling=0.5,
                                                                                     **bw_params)
 
-        self.assertTrue(all(coactiv1 == coactiv))
-        self.assertTrue(all(bold_coactiv1 == bold_coactiv))
+        self.assertTrue((coactiv1 == coactiv).all())
+        self.assertTrue((bold_coactiv1 == bold_coactiv).all())
+
+    def test_generate_local_activations_ind_bold(self):
+        sim_parameters = {"delay": 250,
+                          "rest_before": True,
+                          "first_duration": 6,
+                          "last_duration": 20}
+        TR = 2
+        N_ROIs = 40
+        # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIXv29.mat"
+        #mat_path = '../data/small_01_BLOCK.mat'
+        mat_path = '../data/30_BLOCK_[720ms_TR]_[HCP_WM]'
+        rho, var_rho = 0.34, 0.0024
+        k, var_k = 0.65, 0.015
+        gamma, var_gamma = 0.41, 0.002
+        alpha, var_alpha = 0.32, 0.0015
+        tau, var_tau = 0.98, 0.0568
+        Rho = np.random.normal(rho, np.sqrt(var_rho), size=(N_ROIs,))
+        Gamma = np.random.normal(gamma, np.sqrt(var_gamma), size=(N_ROIs,))
+        K = np.random.normal(k, np.sqrt(var_k), size=(N_ROIs,))
+        Tau = np.random.normal(tau, np.sqrt(var_tau), size=(N_ROIs,))
+        Alpha = np.random.normal(alpha, np.sqrt(var_alpha), size=(N_ROIs,))
+        bw_params = {"alpha": Alpha,
+                     "rho": Rho,
+                     "tau": Tau,
+                     "gamma": Gamma,
+                     "k": K,
+                     "fix_bold": True
+                     }
+        wc_block = WCTaskSim.from_matlab_structure(mat_path,
+                                                   num_regions=N_ROIs,
+                                                   num_modules=4,
+                                                   **sim_parameters)
+        wc_block.TR = TR
+
+        t_coactiv1, coactiv1, bold_coactiv1 = wc_block.generate_coactivation_by_mat(mat_path,
+                                                                                    act_scaling=0.5,
+                                                                                    gen_all_reg=True,
+                                                                                    **bw_params)
+
+        self.assertTrue(True)
 
 
 class TestHRF:
