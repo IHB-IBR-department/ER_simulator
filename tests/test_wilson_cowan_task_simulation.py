@@ -627,7 +627,11 @@ class TestWCTaskSim(TestCase):
         t_coactiv1, coactiv1, bold_coactiv1 = wc_block.generate_coactivation_by_mat(mat_path,
                                                                                     act_scaling=0.5,
                                                                                     gen_all_reg=True,
+                                                                                    dt=50,
                                                                                     **bw_params)
+        plt.subplot(121);plt.plot(t_coactiv1, bold_coactiv1.T)
+        plt.subplot(122);plt.plot(t_coactiv1, coactiv1.T)
+        plt.show()
 
         self.assertTrue(True)
 
