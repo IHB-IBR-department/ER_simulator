@@ -6,7 +6,7 @@ This package enables users to generate biophysically realistic simulations of ta
 
 Additionally, we have incorporated the ability to simulate co-activations using box-car functions to evaluate their impact on the spurious inflation of TMFC estimates.
 
-$ \text{Neuronal activity} =\text{ Oscillations (WC model)} + \text{Co-activations (box-car functions)} $
+$$\text{Neuronal activity} =\text{ Oscillations (WC model)} + \text{Co-activations (box-car functions)}$$
 
 The package is based on modifications of the Wilson-Cowan model implemented in the neurolib library [neurolib]([https://github.com/neurolib-dev/neurolib]) library
 [Cakan, C., Jajcay, N. & Obermayer, K. neurolib: A Simulation Framework 
