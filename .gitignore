@@ -1,0 +1,8 @@
+# created by virtualenv automatically
+venv/
+/.idea/
+/.ipynb_checkpoints
+/tests/.ipynb_checkpoints
+/tests/.pytest_cache
+/.mypy_cache
+
