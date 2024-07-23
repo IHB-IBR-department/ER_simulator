@@ -1,10 +1,16 @@
 # Task Modulated Functional Connectivity (TMFC) simulations
 
-Task connectomics, based on whole-brain task-modulated functional connectivity (TMFC), represents a cutting-edge field within neuroscience. It is characterized by numerous unresolved methodological questions and a lack of universally accepted approaches for TMFC assessment. 
+Task connectomics, based on whole-brain task-modulated functional connectivity (TMFC),
+represents a cutting-edge field within neuroscience. It is characterized by numerous
+unresolved methodological questions and a lack of universally accepted approaches for
+TMFC assessment. 
 
-This package enables users to generate biophysically realistic simulations of task-modulated fMRI time series with predefined task activation designs and customized synaptic weight matrices for each condition (task or rest).
+This package enables users to generate biophysically realistic simulations of 
+task-modulated fMRI time series with predefined task activation designs and 
+customized synaptic weight matrices for each condition (task or rest).
 
-Additionally, we have incorporated the ability to simulate co-activations using box-car functions to evaluate their impact on the spurious inflation of TMFC estimates.
+Additionally, we have incorporated the ability to simulate co-activations
+using box-car functions to evaluate their impact on the spurious inflation of TMFC estimates.
 
 $$\text{Neuronal activity} =\text{ Oscillations (WC model)} + \text{Co-activations (box-car functions)}$$
 
@@ -21,6 +27,8 @@ The key differences from the neurolib implementation are:
  - The ability to simulate coactivation patterns
 
 Furthermore, we have implemented a function for generating synaptic weight matrices.
+An example of utilizing simulations to assess the efficacy of various methods for evaluating task-modulated
+functional connectivity can be found in the [Masharipov, Ruslan, et al. "Comparison of whole-brain task-modulated functional connectivity methods for fMRI task connectomics." bioRxiv (2024): 2024-01](https://doi.org/10.1101/2024.01.22.576622).If you employ this code, please cite the referenced study.
 
 ## Usage examples
 
