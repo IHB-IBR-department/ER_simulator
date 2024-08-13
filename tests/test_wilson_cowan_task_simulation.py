@@ -570,7 +570,7 @@ class TestWCTaskSim(TestCase):
                           "last_duration": 20}
         TR = 2
         N_ROIs = 40
-        # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIXv29.mat"
+        # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIX.mat"
         #mat_path = '../data/small_01_BLOCK.mat'
         mat_path = '../data/30_BLOCK_[720ms_TR]_[HCP_WM]'
         bw_params = {"rho": 0.34, "alpha": 0.32, "V0": 0.02, "k1_mul": None,
@@ -598,7 +598,7 @@ class TestWCTaskSim(TestCase):
                           "last_duration": 20}
         TR = 2
         N_ROIs = 40
-        # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIXv29.mat"
+        # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIX.mat"
         #mat_path = '../data/small_01_BLOCK.mat'
         mat_path = '../data/30_BLOCK_[720ms_TR]_[HCP_WM]'
         rho, var_rho = 0.34, 0.0024
