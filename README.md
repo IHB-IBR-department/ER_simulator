@@ -34,8 +34,8 @@ functional connectivity can be found in the [Masharipov et al. "Comparison of wh
 
 Example Jupyter Notebooks on how to use package can be found in the [notebooks](/notebooks) directory:
  - `01Ex.SynapticMatrixGeneration.ipynb` - Example with synaptic matrix generation
- - `02Ex.BlockDesignOnset.ipynb` - Example for block design onset, with individual ROIs BW parameters
- - `3Ex.TMFC_simulation.ipynb` - Example notebook for arbitrary design saved in mat files with futher series analysis 
+ - `02Ex.BlockDesignOnset.ipynb` - Example for block design with individual ROIs BW parameters
+ - `3Ex.TMFC_simulation.ipynb` - Example notebook for arbitrary design saved in *.mat files with futher time-series analysis 
 
 Below, we provide basic usage examples for the two main functions.
 ### Synaptic matrix generation examples
