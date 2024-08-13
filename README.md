@@ -6,7 +6,7 @@ unresolved methodological questions and a lack of universally accepted approache
 TMFC assessment. 
 
 This package enables users to generate biophysically realistic simulations of 
-task-modulated fMRI time series with predefined task activation designs and 
+task-modulated fMRI time series with predefined task designs and 
 customized synaptic weight matrices for each condition (task or rest).
 
 Additionally, we have incorporated the ability to simulate co-activations
