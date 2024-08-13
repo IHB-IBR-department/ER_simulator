@@ -1,4 +1,4 @@
-# Task Modulated Functional Connectivity (TMFC) simulations
+# Task Modulated Functional Connectivity (TMFC) simulator
 
 Task connectomics, based on whole-brain task-modulated functional connectivity (TMFC),
 represents a cutting-edge field within neuroscience. It is characterized by numerous
