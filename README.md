@@ -14,9 +14,9 @@ using box-car functions to evaluate their impact on the spurious inflation of TM
 
 $$\text{Neuronal activity} =\text{ Oscillations (WC model)} + \text{Co-activations (box-car functions)}$$
 
-The package is based on modifications of the Wilson-Cowan model implemented in the [neurolib](https://github.com/neurolib-dev/neurolib) library, see 
+The package is based on modifications of the Wilson-Cowan model implemented in the [neurolib](https://github.com/neurolib-dev/neurolib) library (see 
 [Cakan, C., Jajcay, N. & Obermayer, K. neurolib: A Simulation Framework 
-for Whole-Brain Neural Mass Modeling. Cogn. Comput. (2021)](https://doi.org/10.1007/s12559-021-09931-9). 
+for Whole-Brain Neural Mass Modeling. Cogn. Comput. (2021)](https://doi.org/10.1007/s12559-021-09931-9)). 
 The key differences from the neurolib implementation are:
 
  - The ability to change the synaptic weight matrix over time
@@ -24,7 +24,7 @@ The key differences from the neurolib implementation are:
  - The ability to save the neural signal with lower resolution
  - The ability to change the repetition time (TR) in BOLD signal convolution
  - The ability to change the hemodynamic response function (HRF) type for convolution
- - The ability to simulate coactivation patterns
+ - The ability to simulate co-activation patterns
 
 Furthermore, we have implemented a function for generating synaptic weight matrices.
 An example of utilizing simulations to assess the efficacy of various methods for evaluating task-modulated
