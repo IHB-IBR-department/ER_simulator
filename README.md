@@ -28,7 +28,7 @@ The key differences from the neurolib implementation are:
 
 Furthermore, we have implemented a function for generating synaptic weight matrices.
 An example of utilizing simulations to assess the efficacy of various methods for evaluating task-modulated
-functional connectivity can be found in the [Masharipov, Ruslan, et al. "Comparison of whole-brain task-modulated functional connectivity methods for fMRI task connectomics." bioRxiv (2024): 2024-01](https://doi.org/10.1101/2024.01.22.576622).If you employ this code, please cite the referenced study.
+functional connectivity can be found in the [Masharipov et al. "Comparison of whole-brain task-modulated functional connectivity methods for fMRI task connectomics." bioRxiv (2024): 2024-01](https://doi.org/10.1101/2024.01.22.576622). If you employ this code, please cite the referenced study.
 
 ## Usage examples
 
