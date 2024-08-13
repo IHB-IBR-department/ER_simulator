@@ -14,7 +14,7 @@ using box-car functions to evaluate their impact on the spurious inflation of TM
 
 $$\text{Neuronal activity} =\text{ Oscillations (WC model)} + \text{Co-activations (box-car functions)}$$
 
-The package is based on modifications of the Wilson-Cowan model implemented in the neurolib library [neurolib]([https://github.com/neurolib-dev/neurolib]) library
+The package is based on modifications of the Wilson-Cowan model implemented in the [neurolib]([https://github.com/neurolib-dev/neurolib]) library
 [Cakan, C., Jajcay, N. & Obermayer, K. neurolib: A Simulation Framework 
 for Whole-Brain Neural Mass Modeling. Cogn. Comput. (2021)](https://doi.org/10.1007/s12559-021-09931-9). 
 The key differences from the neurolib implementation are:
