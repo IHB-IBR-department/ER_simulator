@@ -1,4 +1,4 @@
-# Task Modulated Functional Connectivity (TMFC) simulations
+# Task Modulated Functional Connectivity (TMFC) simulator
 
 Task connectomics, based on whole-brain task-modulated functional connectivity (TMFC),
 represents a cutting-edge field within neuroscience. It is characterized by numerous
@@ -6,7 +6,7 @@ unresolved methodological questions and a lack of universally accepted approache
 TMFC assessment. 
 
 This package enables users to generate biophysically realistic simulations of 
-task-modulated fMRI time series with predefined task activation designs and 
+task-modulated fMRI time series with predefined task designs and 
 customized synaptic weight matrices for each condition (task or rest).
 
 Additionally, we have incorporated the ability to simulate co-activations
@@ -14,9 +14,9 @@ using box-car functions to evaluate their impact on the spurious inflation of TM
 
 $$\text{Neuronal activity} =\text{ Oscillations (WC model)} + \text{Co-activations (box-car functions)}$$
 
-The package is based on modifications of the Wilson-Cowan model implemented in the neurolib library [neurolib]([https://github.com/neurolib-dev/neurolib]) library
+The package is based on modifications of the Wilson-Cowan model implemented in the [neurolib](https://github.com/neurolib-dev/neurolib) library (see 
 [Cakan, C., Jajcay, N. & Obermayer, K. neurolib: A Simulation Framework 
-for Whole-Brain Neural Mass Modeling. Cogn. Comput. (2021)](https://doi.org/10.1007/s12559-021-09931-9). 
+for Whole-Brain Neural Mass Modeling. Cogn. Comput. (2021)](https://doi.org/10.1007/s12559-021-09931-9)). 
 The key differences from the neurolib implementation are:
 
  - The ability to change the synaptic weight matrix over time
@@ -24,18 +24,18 @@ The key differences from the neurolib implementation are:
  - The ability to save the neural signal with lower resolution
  - The ability to change the repetition time (TR) in BOLD signal convolution
  - The ability to change the hemodynamic response function (HRF) type for convolution
- - The ability to simulate coactivation patterns
+ - The ability to simulate co-activation patterns
 
 Furthermore, we have implemented a function for generating synaptic weight matrices.
 An example of utilizing simulations to assess the efficacy of various methods for evaluating task-modulated
-functional connectivity can be found in the [Masharipov, Ruslan, et al. "Comparison of whole-brain task-modulated functional connectivity methods for fMRI task connectomics." bioRxiv (2024): 2024-01](https://doi.org/10.1101/2024.01.22.576622).If you employ this code, please cite the referenced study.
+functional connectivity can be found in the [Masharipov et al. "Comparison of whole-brain task-modulated functional connectivity methods for fMRI task connectomics." bioRxiv (2024): 2024-01](https://doi.org/10.1101/2024.01.22.576622). If you employ this code, please cite the referenced study.
 
 ## Usage examples
 
-Example IPython Notebooks on how to use package can be found in the ./notebooks directory
+Example Jupyter Notebooks on how to use package can be found in the [notebooks](/notebooks) directory:
  - `01Ex.SynapticMatrixGeneration.ipynb` - Example with synaptic matrix generation
- - `02Ex.BlockDesignOnset.ipynb` - Example for block design onset, with individual ROIs BW parameters
- - `3Ex.TMFC_simulation.ipynb` - Example notebook for arbitrary design saved in mat files with futher series analysis 
+ - `02Ex.BlockDesignOnset.ipynb` - Example for block design with individual ROIs BW parameters
+ - `3Ex.TMFC_simulation.ipynb` - Example notebook for arbitrary design saved in *.mat files with futher time-series analysis 
 
 Below, we provide basic usage examples for the two main functions.
 ### Synaptic matrix generation examples

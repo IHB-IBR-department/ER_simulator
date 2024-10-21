@@ -569,38 +569,24 @@ class TestWCTaskSim(TestCase):
                           "first_duration": 6,
                           "last_duration": 20}
         TR = 2
-        N_ROIs = 100
-        # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIXv29.mat"
+        N_ROIs = 40
+        # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIX.mat"
         #mat_path = '../data/small_01_BLOCK.mat'
-        #mat_path = '../data/30_BLOCK_[720ms_TR]_[HCP_WM]'
-        mat_path =  '../data/02_EVENT_[2s_TR]_[1s_DUR]_[6s_ISI]_[100_TRIALS].mat'
+        mat_path = '../data/30_BLOCK_[720ms_TR]_[HCP_WM]'
         bw_params = {"rho": 0.34, "alpha": 0.32, "V0": 0.02, "k1_mul": None,
-                     "k2": None, "k3_mul": None, "gamma": 0.41, "k": 0.65, "tau": 0.98}
-        act_scaling = 0.0015
+                     "k2": None, "k3_mul": None, "gamma": None, "k": None, "tau": None}
         wc_block = WCTaskSim.from_matlab_structure(mat_path,
                                                    num_regions=N_ROIs,
                                                    num_modules=4,
                                                    **sim_parameters)
         wc_block.TR = TR
         t_coactiv, coactiv, bold_coactiv = wc_block.generate_coactivations(mat_path,
-                                                                           act_scaling=act_scaling,
+                                                                           act_scaling=0.5,
                                                                            **bw_params)
         t_coactiv1, coactiv1, bold_coactiv1 = wc_block.generate_coactivation_by_mat(mat_path,
                                                                                     gen_all_reg=False,
-                                                                                    act_scaling=act_scaling,
-
+                                                                                    act_scaling=0.5,
                                                                                     **bw_params)
-
-        node_ids = [1, 26, 51]
-        draw_last = 200
-        draw_last_TR = int(draw_last / TR)  # in seconds
-        fig, axs = plt.subplots(1, 3, figsize=(15, 4))
-
-        for i in range(3):
-            axs[i].plot(t_coactiv[-draw_last_TR:] / 1e3, coactiv[node_ids[i], -draw_last_TR:]);
-            axs[i].plot(t_coactiv[-draw_last_TR:] / 1e3, 5000 * bold_coactiv[node_ids[i], -draw_last_TR:]);
-            axs[i].set_title(f"Bold and resampled act for {node_ids[i]} node");
-        plt.show()
 
         self.assertTrue((coactiv1 == coactiv).all())
         self.assertTrue((bold_coactiv1 == bold_coactiv).all())
@@ -612,7 +598,7 @@ class TestWCTaskSim(TestCase):
                           "last_duration": 20}
         TR = 2
         N_ROIs = 40
-        # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIXv29.mat"
+        # mat_path = "../data/01_BLOCK_[2s_TR]_[20s_DUR]_[10_BLOCKS]_MATRIX.mat"
         #mat_path = '../data/small_01_BLOCK.mat'
         mat_path = '../data/30_BLOCK_[720ms_TR]_[HCP_WM]'
         rho, var_rho = 0.34, 0.0024
