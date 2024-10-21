@@ -585,6 +585,7 @@ class WCTaskSim:
         if gen_all_reg:
             hrf = HRF(num_regions, dt=dt, TR=TR, normalize_max=act_scaling, fix=fix_bold)
             hrf.bw_convolve(activations_by_regions, append=False, **kwargs)
+            #TODO fix resampling procedure
             t_res_activ, res_activ = hrf.resample_to_TR(activations_by_regions)
             convolved_activ = hrf.BOLD
         else:

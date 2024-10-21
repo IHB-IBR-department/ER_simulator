@@ -14,7 +14,7 @@ def generate_synaptic_weights_matrices(
         'equal_var') -> Union[npt.NDArray, list[npt.NDArray, dict]]:
     """Function for synaptic weight matrix generation with different
     module structure. Construction of the synaptic weight matrices
-    involved tцщ steps.
+    involved two steps.
      - First, synaptic weights (wji) were drawn from a Gaussian distribution
     (mean of 1, standard deviation of sigma) for each subject.
      - Second, synaptic weights within and between functional modules
