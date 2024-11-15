@@ -28,15 +28,15 @@ def events2neural(task_fname, tr, n_trs):
     # Check that the file is plausibly a task file
     if task.ndim != 2 or task.shape[1] != 3:
         raise ValueError("Is {0} really a task file?", task_fname)
-    # Convert onset, duration seconds to TRs
+    # Convert onset, duration_list seconds to TRs
     task[:, :2] = task[:, :2] / tr
     ons_dur = task[:, :2]
     if np.any(ons_dur != np.round(ons_dur)):
         raise ValueError('onsets, durations should be multiples of TR')
-    # Neural time course from onset, duration, amplitude for each event
+    # Neural time course from onset, duration_list, amplitude for each event
     time_course = np.zeros(n_trs)
     for onset, duration, amplitude in task:
-        # Make onset and duration integers
+        # Make onset and duration_list integers
         onset = int(round(onset))
         duration = int(round(duration))
         time_course[onset:onset + duration] = amplitude

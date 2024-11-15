@@ -400,6 +400,18 @@ class TestWCTaskSim(TestCase):
         plt.plot(t_BOLD, BOLD_g[0, :])
         plt.show()
 
+    def test_generate_long_rest(self):
+        N_ROIs = 30
+        mat_path = '../data/small_01_BLOCK.mat'
+        sim_parameters = {"delay": 250, "rest_before": True, "first_duration": 6, "last_duration": 20}
+        TR = 2
+        act_type = 'syn_act'
+        wc_block = WCTaskSim.from_matlab_structure(mat_path,
+                                                   num_regions=N_ROIs,
+                                                   **sim_parameters)
+        wc_block.generate_long_rest(rest_duration=60)
+        assert True
+
     def test_full_series_from_mat(self):
         N_ROIs = 30
         wc_params = {'exc_ext': 0.76,  # baseline external input to E

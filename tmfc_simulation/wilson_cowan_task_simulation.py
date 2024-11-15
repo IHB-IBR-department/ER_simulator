@@ -53,13 +53,13 @@ class WCTaskSim:
             task_name_list (list):
                 name of the task to start
             duration_list (list):
-                duration for each task or duration for all tasks if single float
+                duration_list for each task or duration_list for all tasks if single float
             rest_before (bool):
                 if need to generate rest before the start of experiment
             first_duration (float):
-                duration of first rest signal, in sec
+                duration_list of first rest signal, in sec
             last_duration (float):
-                duration of last rest signal, in sec
+                duration_list of last rest signal, in sec
             append_outputs (bool):
                 if need to append raw outputs after each integration, default False,
                 because it is very memory consuming
@@ -75,7 +75,7 @@ class WCTaskSim:
             normalize_max (float):
                 normalizing constant for bold input transformation
             output_activation (str):
-                type of output activation to pass to bold signal, possible params: 'syn_act', 'sum'
+                type of output_type activation to pass to bold signal, possible params: 'syn_act', 'sum'
             exc_ext (float):
                 excitation parameter
             K_gl (float):
@@ -118,7 +118,7 @@ class WCTaskSim:
             self.duration_list = duration_list
             assert len(self.duration_list) == len(
                 self.onset_time_list), (
-                "Lenght of duration list should be equal to onset_time list")
+                "Lenght of duration_list list should be equal to onset_time list")
         else:
             assert isinstance(duration_list, (int, float))
             self.duration_list = [duration_list] * len(self.onset_time_list)
@@ -163,7 +163,7 @@ class WCTaskSim:
         self.init_wc_model()
 
     def init_wc_model(self):
-        self.wc.params['duration'] = self.duration_list[0] * 1000
+        self.wc.params['duration_list'] = self.duration_list[0] * 1000
         # this default values optimised for 30 rois
         self.wc.params['exc_ext'] = self.exc_ext
         self.wc.params['K_gl'] = self.K_gl
@@ -291,11 +291,11 @@ class WCTaskSim:
         # buit-in nativ neurolib chunkwise integration
         if self.chunkwise:
             assert duration % 2 == 0, (
-                "For faster integration time duration is chunkwise"
-                " duration should be divisible by two ")
+                "For faster integration time duration_list is chunkwise"
+                " duration_list should be divisible by two ")
         self.wc.params['Cmat'] = Cmat
         np.fill_diagonal(self.wc.params['Cmat'], 0)
-        self.wc.params['duration'] = duration * 1000  # duration in ms
+        self.wc.params['duration_list'] = duration * 1000  # duration_list in ms
         self.wc.run(append_outputs=self.append_outputs,
                     bold=self.bold,
                     continue_run=True,
@@ -383,7 +383,7 @@ class WCTaskSim:
         """ Wrapper for last resting state block """
         start_time_rest = self.onset_time_list[-1] + self.duration_list[-1]
         Cmat = self.Wij_rest
-        # set last rest duration equal to previous gap between onset times
+        # set last rest duration_list equal to previous gap between onset times
         duration = self.last_duration
         end_time_rest = start_time_rest + duration
         self._generate_single_block(Cmat,
@@ -392,6 +392,56 @@ class WCTaskSim:
                                     a_s_rate=a_s_rate, syn_act=syn_act)
         self.time_idxs_dict["Rest"].append([round(start_time_rest, 3),
                                             round(end_time_rest, 3)])
+
+    def generate_long_rest(self,
+                            rest_duration: float,
+                            activity: bool = True,
+                            a_s_rate: float = 0.02,
+                            syn_act: bool = True,
+                            normalize_max: float = 0.001,
+                            output_activation: str = 'syn_act',
+                            clear_raw: bool = True,
+                            fix_bold=True,
+                            bold_chunkwise: bool = True,
+                            TR: float = 2,
+                            **kwargs):
+
+        """Function for generating long resting state blocks with duration_list set with rest_durations (ins ses)."""
+
+        # set up bold parameters
+        self.output_activation = output_activation
+        self.normalize_max = normalize_max
+        self.fix_bold = fix_bold
+        self.TR = TR
+        if bold_chunkwise:
+            self.bold_input_ready = True
+            self.append_outputs = False
+            self.bold = False
+            self.chunkwise = False
+
+        chunksize = TR * 10
+        num_chunks = int(np.ceil(rest_duration / chunksize))
+
+        start_time_rest = 0
+        duration = chunksize
+        end_time_rest = chunksize
+
+        Cmat = self.Wij_rest
+        for i in range(num_chunks):
+            self._generate_single_block(Cmat,
+                                duration=duration,
+                                activity=activity,
+                                a_s_rate=a_s_rate,
+                                syn_act=syn_act)
+            self.time_idxs_dict["Rest"].append([round(start_time_rest, 3),
+                                        round(end_time_rest, 3)])
+            start_time_rest += chunksize
+            end_time_rest += chunksize
+
+
+
+
+
 
     def generate_full_series(self,
                              bold_chunkwise: bool = True,
@@ -941,8 +991,8 @@ class HRF:
         Create external activation separately for each region
         Args:
             onsets (list of list of int or list): onset list for each region, for example [10, 12, 15], N lists
-            duration (float or list of lists): duration of each task
-            last_rest (float): duration of the last rest part
+            duration (float or list of lists): duration_list of each task
+            last_rest (float): duration_list of the last rest part
 
         Returns:
 

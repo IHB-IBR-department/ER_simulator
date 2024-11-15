@@ -14,11 +14,11 @@ def create_task_design_activation(onsets_list: list[list],
     Args:
         onsets_list (list of list of float or list): onset list for each task,
                     for example [10, 12, 15], N lists equal to number of tasks, onsets in seconds
-        durations_list (list of float or list of lists): duration of each task,
+        durations_list (list of float or list of lists): duration_list of each task,
         one number for each task or list of durations corresponds to each onset
         dt (float): sampling time in ms, i.e. 0.1 means 0.1ms
-        last_rest (float): duration of the last rest part
-        first_rest (float): duration of the first part
+        last_rest (float): duration_list of the last rest part
+        first_rest (float): duration_list of the first part
 
 
     Returns:
@@ -38,7 +38,7 @@ def create_task_design_activation(onsets_list: list[list],
     for i, durations in enumerate(durations_list):
         if isinstance(durations, (list, tuple)):
             assert len(durations) == len(onsets_list[i]), \
-                "if list of duration provided, length should corresponds to onsets list"
+                "if list of duration_list provided, length should corresponds to onsets list"
         else:
             durations_list[i] = [durations] * len(onsets_list[i])
     max_onset = np.max([np.max(onsets) for onsets in onsets_list])

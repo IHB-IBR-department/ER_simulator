@@ -124,11 +124,11 @@ wc_params = {'inh_ext': 3, 'tau_ou': 15} #parameters for WC model, see model des
 wc_block = WCTaskSim(Wij_task_dict,
                      Wij_rest,
                      D,
-                     first_duration=6, #the duration of rest series before 0 onset time
+                     first_duration=6, #the duration_list of rest series before 0 onset time
                      rest_before=True,
                      onset_time_list=[0., 4., 6.0, 8.],
                      duration_list=2, #one number for each task (in seconds) or list of numbers corresponde to task sequence
-                     last_duration=4, #last rest duration 
+                     last_duration=4, #last rest duration_list 
                      task_name_list=["task_A", "task_B", "task_A", "task_A"],
                      **wc_params)
 

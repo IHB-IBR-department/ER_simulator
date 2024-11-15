@@ -223,7 +223,7 @@ class NeuralMassModel:
             ind (int): random number for seed initialization
 
         Returns:
-            dict with input and output activity
+            dict with input and output_type activity
 
         """
 

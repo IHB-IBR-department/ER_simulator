@@ -1,0 +1,62 @@
+# runtime parameters
+dt: 0.1  # time step in ms, 0.1 ms is reasonable
+duration: 2000  # simulation duration_list in ms
+seed: null  # placeholder for RNG seed, set during runtime
+
+# global whole-brain network parameters
+signalV: 10.0  # signal transmission speed between areas in m/s
+K_gl: 2.63  # global coupling strength
+
+# network structure parameters (set dynamically)
+Cmat:
+  type: matrix  # coupling matrix
+  description: "N x N matrix with 0 on diagonal for no self-connections"
+lengthMat:
+  type: matrix  # connection length matrix
+  description: "N x N matrix, contains delays between nodes"
+
+# local node parameters
+
+# external input parameters
+tau_ou: 5.0  # ms timescale of the Ornstein-Uhlenbeck noise process
+sigma_ou: 0.0035 # noise intensity
+exc_ou_mean: 0.0  # mean of OU process for excitatory input
+inh_ou_mean: 0.0  # mean of OU process for inhibitory input
+
+# neural mass model parameters
+tau_exc: 2.5  # excitatory time constant
+tau_inh: 3.75  # inhibitory time constant
+c_excexc: 16  # local excitatory-excitatory coupling
+c_excinh: 15  # local excitatory-inhibitory coupling
+c_inhexc: 12  # local inhibitory-excitatory coupling
+c_inhinh: 3  # local inhibitory-inhibitory coupling
+a_exc: 1.5  # excitatory gain
+a_inh: 1.5  # inhibitory gain
+mu_exc: 3.0  # excitatory firing threshold
+mu_inh: 3.0  # inhibitory firing threshold
+
+# external input values
+exc_ext_baseline: 0  # baseline external input to excitatory neurons
+inh_ext_baseline: 0  # baseline external input to inhibitory neurons
+exc_ext: 0  # time-dependent external input to excitatory neurons
+inh_ext: 0  # time-dependent external input to inhibitory neurons
+
+# initial conditions
+exc_init:
+  type: random  # randomized initial state for excitatory variables
+  scale: 0.05
+  dimensions: N x 1  # N nodes, initialized with random uniform values
+
+inh_init:
+  type: random  # randomized initial state for inhibitory variables
+  scale: 0.05
+  dimensions: N x 1  # N nodes, initialized with random uniform values
+
+# Ornstein-Uhlenbeck noise state variables
+exc_ou:
+  type: zeros
+  dimensions: N  # state variable for excitatory OU noise
+
+inh_ou:
+  type: zeros
+  dimensions: N  # state variable for inhibitory OU noise

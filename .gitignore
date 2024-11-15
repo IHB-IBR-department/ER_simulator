@@ -5,4 +5,5 @@ venv/
 /tests/.ipynb_checkpoints
 /tests/.pytest_cache
 /.mypy_cache
-
+.DS_Store
+/notebooks/.DS_Store

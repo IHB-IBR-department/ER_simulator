@@ -1,5 +1,35 @@
 import numpy as np
 import scipy.signal
+from scipy.signal import decimate
+
+
+def resample_signal(time, signal: np.ndarray,
+                    original_sampling_time: float,
+                    new_sampling_time: float,
+                    approx: bool = False) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Resample signal to desired sampling time.
+    Args:
+        signal:
+        original_sampling_time:
+        desired_sampling_rate:
+
+    Returns:
+
+    """
+
+    downsampling_factor = int(new_sampling_time / original_sampling_time)
+    assert downsampling_factor > 1, "New time resolution must by lower than original."
+    # Downsample the signal using decimation
+    if approx:
+        time_start = time[0]
+        time_end = time[-1]
+        downsampled_signal = decimate(signal, downsampling_factor)
+        downsampled_time = np.linspace(time_start, time_end, len(downsampled_signal))
+    else:
+        downsampled_signal = signal[:, ::downsampling_factor]
+        downsampled_time = time[::downsampling_factor]
+    return downsampled_signal, downsampled_time
 
 def getPowerSpectrum(activity, dt, maxfr=70, spectrum_windowsize=1.0, normalize=False):
     """Returns a power spectrum using Welch's method.
@@ -31,7 +61,7 @@ def getPowerSpectrum(activity, dt, maxfr=70, spectrum_windowsize=1.0, normalize=
         scaling="spectrum",
     )
     f = f[f < maxfr]
-    Pxx_spec = Pxx_spec[0 : len(f)]
+    Pxx_spec = Pxx_spec[0: len(f)]
     if normalize:
         Pxx_spec /= np.max(Pxx_spec)
     return f, Pxx_spec

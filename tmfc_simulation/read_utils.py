@@ -11,7 +11,7 @@ def read_onsets_from_mat(mat_path: str) -> tuple[list, list, list]:
         activations  - N arrays, where N corresponds to number of tasks,
         with the length equal to number of time moments with 0 and 1,
         where 1 means that at this onset task is active. Used only for outer activations
-        durations : array with duration of each onset
+        durations : array with duration_list of each onset
         names: array with the task names
         onsets: time moments when new task started, number of tasks corresponds
         to the shape of array, number of vectors corresponds to number of tasks,
@@ -22,7 +22,7 @@ def read_onsets_from_mat(mat_path: str) -> tuple[list, list, list]:
 
 
     :param mat_path:
-    :return: 3 lists with onsets, task_names and duration
+    :return: 3 lists with onsets, task_names and duration_list
     """
 
     input_data = io.loadmat(mat_path)
@@ -60,7 +60,7 @@ def generate_sw_matrices_from_mat(mat_path: str,
         activations  - N arrays, where N corresponds to number of tasks,
         with the length equal to number of time moments with 0 and 1,
         where 1 means that at this onset task is active. Used only for outer activations
-        durations : array with duration of each onset
+        durations : array with duration_list of each onset
         names: array with the task names
         onsets: time moments when new task started, number of tasks corresponds
         to the shape of array, number of vectors corresponds to number of tasks,

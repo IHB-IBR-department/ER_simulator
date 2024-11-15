@@ -4,7 +4,7 @@ from neurolib.models.wc import WCModel
 
 def simple_one_node(exc_ext=1.5):
     wc = WCModel()
-    wc.params['duration'] = 2.0 * 1000
+    wc.params['duration_list'] = 2.0 * 1000
     wc.params['exc_ext'] = exc_ext
     wc.params['c_inhexc'] = 12
     wc.run()
@@ -15,7 +15,7 @@ def ito_version(K_gl=4, exc_ext=-5):
     A = np.array([[0, 1], [1, 0]])
     D = np.array([[0, 0], [0, 0]])
     wc = WCModel(Cmat=A, Dmat=D)
-    wc.params['duration'] = 1000
+    wc.params['duration_list'] = 1000
     wc.params['exc_ext'] = exc_ext
     wc.params['K_gl'] = K_gl
     wc.params['dt'] = 10
