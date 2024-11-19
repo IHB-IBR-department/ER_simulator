@@ -33,15 +33,16 @@ class WCTaskSim:
             }
         else:
             self.output[output_type] = None
-        self.seed = seed
+
         self.output['mtime'] = None
         if params is None:
             #if params is None, they will load from yaml file
             params = load_wc_params(Cmat=None)
 
         self.params = params
+        self.params["seed"] = seed
 
-        self.inits = dict()
+        self.inits: Dict[str, Optional[Union[float, npt.NDArray[np.float64]]]] = {}
         for init_var in self.init_vars:
             self.inits[init_var] = None
         # time in ms
@@ -148,15 +149,15 @@ class WCTaskSim:
         while self.onset_time_list[-1] >= lastT + 1e-6:
             out, mtime = self._generate_chunk_with_onsets(start_time=lastT)
             if self.output_type != "all":
-                self.output[self.output_type] =  np.hstack(
+                self.output[self.output_type] = np.hstack(
                     [self.output[self.output_type], out]) if self.output[self.output_type] is not None else out
             else:
                 self.output["syn_act"] = np.hstack([self.output["syn_act"],
-                                                    out[0]]) if self.output[self.output_type] is not None else out[0]
+                                                    out[0]]) if self.output["syn_act"] is not None else out[0]
                 self.output["exc"] = np.hstack([self.output["exc"],
-                                                out[1]]) if self.output[self.output_type] is not None else out[1]
+                                                out[1]]) if self.output["exc"] is not None else out[1]
                 self.output["inh"] = np.hstack([self.output["inh"],
-                                                out[2]]) if self.output[self.output_type] is not None else out[2]
+                                                out[2]]) if self.output["inh"] is not None else out[2]
 
             self.output["mtime"] = np.hstack([self.output["mtime"],
                                               mtime]) if self.output['mtime'] is not None else mtime
@@ -186,21 +187,21 @@ class WCTaskSim:
         last_t = self.inits["last_t"]
         self.inits["last_t"] = last_t+duration
         t, excs, inhs, exc_ou, inh_ou = self._generate_full_single_chunk(Cmat, duration, update_inits=True)
-        excs = excs[:, self.max_delay+1:]
-        inhs = inhs[:, self.max_delay+1:]
+        #excs = excs[:, self.max_delay+1:]
+        #inhs = inhs[:, self.max_delay+1:]
         #compute syn_act if need
         if self.output_type in ["all", "syn_act"]:
             syn_act = self.generate_neuronal_oscill(excs, inhs, Cmat)
         if self.output_type == "syn_act":
-            out, time = resample_signal(t, syn_act, self.params['dt'] / 1000, self.mTime)
+            out, time = resample_signal(t, syn_act, self.params['dt'] / 1000, self.mTime, last_time=last_t/1000)
         elif self.output_type == "exc":
-            out, time = resample_signal(t, excs, self.params['dt'] / 1000, self.mTime)
+            out, time = resample_signal(t, excs, self.params['dt'] / 1000, self.mTime, last_time=last_t/1000)
         elif self.output_type == "all":
-            out_excs,_ = resample_signal(t, excs, self.params['dt'] / 1000, self.mTime)
-            out_syn,_ = resample_signal(t, syn_act, self.params['dt'] / 1000, self.mTime)
-            out_inh, time = resample_signal(t, inhs, self.params['dt'] / 1000, self.mTime)
+            out_excs,_ = resample_signal(t, excs, self.params['dt'] / 1000, self.mTime, last_time=last_t/1000)
+            out_syn,_ = resample_signal(t, syn_act, self.params['dt'] / 1000, self.mTime, last_time=last_t/1000)
+            out_inh, time = resample_signal(t, inhs, self.params['dt'] / 1000, self.mTime, last_time=last_t/1000)
 
-            out = (out_syn, out_excs, out_inh), time
+            out = out_syn, out_excs, out_inh
 
         time = time + last_t
         return out, time/1000
@@ -215,13 +216,14 @@ class WCTaskSim:
             if self.inits[init_var] is not None:
                 self.params[init_var] = self.inits[init_var].copy()
         t, excs, inhs, exc_ou, inh_ou = time_integration(params=self.params)
+        startind = int(self.max_delay + 1)
+
         if update_inits:
-            startind = int(self.max_delay + 1)
             self.inits["exc_init"] = excs[:, -startind:]
             self.inits["inh_init"] = inhs[:, -startind:]
             self.inits["exc_ou"] = exc_ou
             self.inits["inh_ou"] = inh_ou
-        return t, excs, inhs, exc_ou, inh_ou
+        return t, excs[:, startind:], inhs[:, startind:], exc_ou, inh_ou
 
     def getMaxDelay(self, Dmat: Optional[npt.NDArray[np.float64]] = None) -> int:
         """Computes the maximum delay of the model. This function should be overloaded
@@ -254,8 +256,8 @@ class WCTaskSim:
             max_global_delay = 0
         return max_global_delay
 
-    def complete_onsets_with_rest(self,
-                                  onset_time_list: list[float],
+    @staticmethod
+    def complete_onsets_with_rest(onset_time_list: list[float],
                                   task_name_list: list[str],
                                   duration_list: list[float],
                                   rest_before: float,

@@ -6,10 +6,13 @@ from scipy.signal import decimate
 def resample_signal(time, signal: np.ndarray,
                     original_sampling_time: float,
                     new_sampling_time: float,
-                    approx: bool = False) -> tuple[np.ndarray, np.ndarray]:
+                    last_time: float = 0,
+                    ) -> tuple[np.ndarray, np.ndarray]:
     """
     Resample signal to desired sampling time.
     Args:
+        last_time_idx:
+        new_sampling_time:
         signal:
         original_sampling_time:
         desired_sampling_rate:
@@ -18,17 +21,16 @@ def resample_signal(time, signal: np.ndarray,
 
     """
 
-    downsampling_factor = int(new_sampling_time / original_sampling_time)
-    assert downsampling_factor > 1, "New time resolution must by lower than original."
+    if signal.ndim == 1:
+        signal = signal[np.newaxis, :]
+    downsampling_factor = int(round(new_sampling_time / original_sampling_time))
+    last_time_idx = int(round(last_time / original_sampling_time))
+
+    assert downsampling_factor >= 1, "New time resolution must by lower than original."
     # Downsample the signal using decimation
-    if approx:
-        time_start = time[0]
-        time_end = time[-1]
-        downsampled_signal = decimate(signal, downsampling_factor)
-        downsampled_time = np.linspace(time_start, time_end, len(downsampled_signal))
-    else:
-        downsampled_signal = signal[:, ::downsampling_factor]
-        downsampled_time = time[::downsampling_factor]
+
+    downsampled_signal = signal[:, np.mod(last_time_idx, downsampling_factor)::downsampling_factor]
+    downsampled_time = time[np.mod(last_time_idx, downsampling_factor)::downsampling_factor]
     return downsampled_signal, downsampled_time
 
 def getPowerSpectrum(activity, dt, maxfr=70, spectrum_windowsize=1.0, normalize=False):

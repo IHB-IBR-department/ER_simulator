@@ -15,23 +15,19 @@ def sample_neurosignal():
     signal_3d = np.stack([signal, signal, signal])
     return time, signal, signal_3d, original_dt, new_dt
 
-from scipy.signal import decimate
 
 def test_resample_signal_downsample(sample_neurosignal):
     time, signal, signal_3d,original_dt, new_dt = sample_neurosignal
-    downsampled_signal, downsampled_time,= resample_signal(time, signal, original_dt, new_dt, approx=False)
-    downsampled_signal1, downsampled_time1, = resample_signal(time, signal, original_dt, new_dt, approx=True)
+    downsampled_signal, downsampled_time = resample_signal(time, signal, original_dt, new_dt)
 
-    plot = False
+    plot = True
     if plot:
-        plt.subplot(121); plt.plot(time, signal)
-        plt.subplot(121); plt.plot(downsampled_time, downsampled_signal)
-        plt.subplot(122); plt.plot(time, signal)
-        plt.subplot(122); plt.plot(downsampled_time1, downsampled_signal1)
+        plt.subplot(121); plt.plot(time, signal.T)
+        plt.subplot(121); plt.plot(downsampled_time, downsampled_signal.T)
 
         plt.show()
 
-    assert len(downsampled_signal) == len(downsampled_time)
+    assert len(downsampled_signal.T) == len(downsampled_time)
     assert len(downsampled_time) == 8
     assert downsampled_time[-1] < time[-1] # because the new time array should cover the original timespan
 
@@ -48,28 +44,34 @@ def test_resample_signal_invalid_rates(sample_neurosignal):
 def test_resample_3dsignal(sample_neurosignal):
     # Test with new_dt not being integer multiple of original_dt
     time, signal, signal_3d,original_dt, new_dt = sample_neurosignal
-    downsampled_signal, downsampled_time,= resample_signal(time, signal_3d, original_dt, new_dt, approx=False)
+    downsampled_signal, downsampled_time= resample_signal(time, signal_3d, original_dt, new_dt)
     assert len(downsampled_signal[0]) == len(downsampled_time)
 
 
 
 
 
-
-
-
-def test_resample_signal_no_change():
+def test_resample_signal_no_change(sample_neurosignal):
     # Test with new_sampling_time = original_sampling_time (no change)
-    original_sampling_rate = 1000  # Hz
-    new_sampling_rate = 1000  # Hz
-    time = np.arange(0, 1, 1 / original_sampling_rate)
-    signal = np.sin(2 * np.pi * 10 * time)  # 10 Hz sine wave
+    time, signal, signal_3d,original_dt, new_dt = sample_neurosignal
 
-    downsampled_signal, downsampled_time = resample_signal(time, signal, original_sampling_rate,
-                                                          new_sampling_rate)
 
-    assert len(downsampled_signal) == len(signal)
+    downsampled_signal, downsampled_time = resample_signal(time, signal, original_dt,
+                                                          original_dt)
+
+    assert len(downsampled_signal.T) == len(signal)
     assert len(downsampled_time) == len(time)
+
+def test_resample_signal_with_shift(sample_neurosignal):
+    time, signal, signal_3d, original_dt, new_dt = sample_neurosignal
+    last_time = 0.3
+    time = time + last_time
+    new_dt = 1/100
+    downsampled_signal, downsampled_time = resample_signal(time, signal, original_dt, new_dt, last_time)
+    assert len(downsampled_signal.T) == len(downsampled_time)
+    assert np.allclose(downsampled_time[0], last_time)
+
+
 
 
 

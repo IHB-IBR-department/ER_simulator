@@ -36,9 +36,9 @@ mu_exc: 3.0  # excitatory firing threshold
 mu_inh: 3.0  # inhibitory firing threshold
 
 # external input values
-exc_ext_baseline: 0  # baseline external input to excitatory neurons
+exc_ext_baseline: 0 # baseline external input to excitatory neurons
 inh_ext_baseline: 0  # baseline external input to inhibitory neurons
-exc_ext: 0  # time-dependent external input to excitatory neurons
+exc_ext: 0.75  # time-dependent external input to excitatory neurons
 inh_ext: 0  # time-dependent external input to inhibitory neurons
 
 # initial conditions
