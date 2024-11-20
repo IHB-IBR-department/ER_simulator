@@ -1,15 +1,147 @@
 import numpy as np
 import numba
 from typing import Optional, Union
+import numpy.typing as npt
+
+
+class BWBoldModel(object):
+    """ Balloon-Windkessel BOLD simulator class.
+    BOLD simulation results are saved in t_BOLD, BOLD instance attributes.
+    Only bold signal generation, no downsampling inside the class
+    """
+
+    def __init__(self,
+                 N: int,
+                 dt: float,
+                 normalize_constant: float = 1,
+                 rho: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
+                 alpha: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
+                 gamma: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
+                 k: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
+                 tau: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
+                 fix: bool = False):
+        """
+        Initialize the BWBoldModel.
+
+        :param N: Number of regions/nodes.
+        :type N: int
+        :param dt: Time step (s).
+        :type dt: float
+        :param normalize_constant: Normalization constant, defaults to 1.
+        :type normalize_constant: float, optional
+        :param rho: Resting net oxygen extraction. Can be a single float, a tuple/list of two floats (mean and variance), or a numpy array of shape (N,) representing values for each region. Defaults to None, which uses default values with variance.
+        :type rho: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]], optional
+        :param alpha: Grubb's vessel stiffness exponent. Can be a single float, a tuple/list of two floats (mean and variance), or a numpy array of shape (N,) representing values for each region. Defaults to None, which uses default values with variance.
+        :type alpha: Optional[Union[float, tuple[float, float], list[float, float],  npt.NDArray[np.float64]]]], optional
+        :param gamma: Rate constant for autoregulatory feedback by blood flow. Can be a single float, a tuple/list of two floats (mean and variance), or a numpy array of shape (N,) representing values for each region. Defaults to None, which uses default values with variance.
+        :type gamma: Optional[Union[float, tuple[float, float], list[float, float],  npt.NDArray[np.float64]]]], optional
+        :param k: Rate of signal decay. Can be a single float, a tuple/list of two floats (mean and variance), or a numpy array of shape (N,) representing values for each region. Defaults to None, which uses default values with variance.
+        :type k: Optional[Union[float, tuple[float, float], list[float, float],  npt.NDArray[np.float64]]]], optional
+        :param tau: Transit time. Can be a single float, a tuple/list of two floats (mean and variance), or a numpy array of shape (N,) representing values for each region. Defaults to None, which uses default values with variance.
+        :type tau: Optional[Union[float, tuple[float, float], list[float, float],  npt.NDArray[np.float64]]]], optional
+        """
+        self.N = N
+        self.dt = dt
+        self.normalize_constant = normalize_constant
+        self._init_parameters(rho, alpha, gamma, k, tau, fix=fix)
+
+        # initialize BOLD model variables
+        self.X_BOLD = np.zeros((N,))
+        # Vasso dilatory signal
+        self.F_BOLD = np.ones((N,))
+        # Blood flow
+        self.Q_BOLD = np.ones((N,))
+        # Deoxyhemoglobin
+        self.V_BOLD = np.ones((N,))
+        # Blood volume
+
+    def run(self, activity):
+        # Compute the BOLD signal for the chunk
+        BOLD, self.X_BOLD, self.F_BOLD, self.Q_BOLD, self.V_BOLD = simulateBOLD(
+            activity,
+            self.dt,
+            rho=self.rho,
+            alpha=self.alpha,
+            gamma=self.gamma,
+            k=self.k,
+            tau=self.tau,
+            X=self.X_BOLD,
+            F=self.F_BOLD,
+            Q=self.Q_BOLD,
+            V=self.V_BOLD,
+        )
+        return BOLD
+
+    def save_parameters(self, filepath, s_type='mat'):
+        """Saves the model parameters rho, alpha, gamma, k, tau.
+
+        :param filepath: The path to the output file.
+        :type filepath: str
+        :param s_type: The desired file format. Can be 'mat', 'npy', or 'rp5'.
+        :type s_type: str, optional
+        :raises ValueError: if ``format`` is not 'mat', 'npy', or 'rp5'
+        """
+
+        params = {
+            'rho': self.rho,
+            'alpha': self.alpha,
+            'gamma': self.gamma,
+            'k': self.k,
+            'tau': self.tau,
+        }
+
+        if s_type == 'mat':
+            import scipy.io as sio
+            sio.savemat(filepath, params)
+        elif s_type == 'npy':
+            np.save(filepath, params)
+        elif s_type == 'hdf5':
+            import h5py
+            with h5py.File(filepath, 'w') as hf:
+                for key, value in params.items():
+                    hf.create_dataset(key, data=value)
+        else:
+            raise ValueError("Unsupported s_type. Choose from 'mat', 'npy', or 'hdf5'.")
+
+    def _init_parameters(self, rho, alpha, gamma, k, tau, fix=True):
+        def process_param(param, default_mean, default_var, param_name):
+            """Helper function to process parameters."""
+            voxelCounts = np.ones((self.N,))
+            voxelCountsSqrtInv = 1 / np.sqrt(voxelCounts)
+
+            if param is not None:
+                assert isinstance(param, (float, list, tuple, np.ndarray)), \
+                    f"{param_name} must be float or list or tuple of two floats or N floats"
+
+            if param is None:
+                mean, var = default_mean, default_var
+            elif isinstance(param, float):
+                mean, var = param, default_var
+            elif len(param) == 2:
+                mean, var = param[0], param[1]
+            elif len(param) == self.N:
+                mean, var = np.array(param), None
+            else:
+                raise ValueError(f"{param_name} must be float or of two or N floats")
+
+            return mean * np.ones((self.N,)) if var is None or fix \
+                else np.random.normal(mean, np.sqrt(var) * voxelCountsSqrtInv, size=(self.N,))
+
+        # Process each parameter using the helper function
+        self.rho = process_param(rho, 0.34, 0.0024, "rho")
+        self.alpha = process_param(alpha, 0.32, 0.0015, "alpha")
+        self.gamma = process_param(gamma, 0.41, 0.002, "gamma")
+        self.k = process_param(k, 0.65, 0.015, "k")
+        self.tau = process_param(tau, 0.98, 0.0568, "tau")
 
 
 def simulateBOLD(Z,
                  dt,
-                 rho: Optional[Union[float, tuple[float,float],list[float,float]]] = None,
-                 alpha:Optional[Union[float, tuple[float,float],list[float,float]]]=None,
-                 gamma: Optional[Union[float, tuple[float,float],list[float,float]]]=None,
-                 k: Optional[Union[float, tuple[float,float],list[float,float]]]=None,
-                 tau: Optional[Union[float, tuple[float,float],list[float,float]]]=None,
+                 rho,
+                 alpha,
+                 gamma,
+                 k,
+                 tau,
                  X=None,
                  F=None,
                  Q=None,
@@ -17,9 +149,7 @@ def simulateBOLD(Z,
                  V0=None,
                  k1_mul=None,
                  k2=None,
-                 k3_mul=None,
-                 fix:bool = True,
-                 voxelCounts=None):
+                 k3_mul=None):
     """ Adopted function from neurolib, added parameters for the shape of bold activation to the argument,
     the only difference
     https://github.com/neurolib-dev/neurolib/blob/master/neurolib/models/bold/timeIntegration.py
@@ -28,7 +158,7 @@ def simulateBOLD(Z,
     See Friston 2000, Friston 2003 and Deco 2013 for reference on how the BOLD signal is simulated.
     The returned BOLD signal should be downsampled to be comparable to a recorded fMRI signal.
 
-    :param Z: Synaptic activity
+    :param Z: Synaptic activity or other signal to convolve
     :type Z: numpy.ndarray
     :param dt: dt of input activity in s
     :type dt: float
@@ -46,13 +176,10 @@ def simulateBOLD(Z,
     :return: BOLD, X, F, Q, V
     :rtype: (numpy.ndarray,)
 
-    Args:
-        fix:
+
     """
 
     N = np.shape(Z)[0]
-
-
 
     # Balloon-Windkessel model parameters (from Friston 2003):
     # Friston paper: Nonlinear responses in fMRI: The balloon model, Volterra kernels, and other hemodynamics
@@ -75,121 +202,15 @@ def simulateBOLD(Z,
     # If no voxel counts are given, we can use scalar values for each region's parameter:
 
     # Capillary resting net oxygen extraction (dimensionless), E_0 in Friston2000
-    if voxelCounts is None:
-        voxelCounts = np.ones((N,))
-    voxelCountsSqrtInv = 1 / np.sqrt(voxelCounts)
-
-    #setting parameters
-    if rho is not None:
-        assert isinstance(rho, (float, list, tuple, np.ndarray)), \
-            "rho must be float or list or tuple of two floats or N floats"
-
-    if rho is None:
-        rho, var_rho = 0.34, 0.0024
-    elif isinstance(rho, float):
-        rho, var_rho = rho, 0.0024
-    elif len(rho) == 2:
-        rho, var_rho = rho[0], rho[1]
-    elif len(rho) == N:
-        rho = np.array(rho)
-    else:
-        raise ValueError("Rho must be float or of two or N floats")
-
-    if fix:
-        Rho = rho*np.ones((N,))
-    else:
-        Rho = np.random.normal(rho, np.sqrt(var_rho) * voxelCountsSqrtInv, size=(N,))
-    # Grubb's vessel stiffness exponent (dimensionless), \alpha in Friston2000
-    if alpha is not None:
-        assert isinstance(alpha, (float, list, tuple, np.ndarray)), \
-            "alpha must be float or list or tuple of two floats"
-
-    if alpha is None:
-        alpha, var_alpha = 0.32, 0.0015
-    elif isinstance(alpha, float):
-        alpha, var_alpha = alpha, 0.0015
-    elif len(alpha) == 2:
-        alpha, var_alpha = alpha[0], alpha[1]
-    elif len(alpha) == N:
-        alpha = np.array(alpha)
-    else:
-        raise ValueError("alpha must be float or of two or N floats")
-
-    if fix:
-        Alpha = alpha*np.ones((N,))
-    else:
-        Alpha = np.random.normal(alpha, np.sqrt(var_alpha) * voxelCountsSqrtInv, size=(N,))
 
     # Resting blood volume fraction (dimensionless)
     V0 = 0.02 if V0 is None else V0
 
-    K1 = 7 * Rho if k1_mul is None else k1_mul*Rho # (dimensionless)
+    K1 = 7 * rho if k1_mul is None else k1_mul * rho  # (dimensionless)
     k2 = 2.0 if k2 is None else k2  # (dimensionless)
-    K3 = 2 * Rho - 0.2 if k3_mul is None else k3_mul * Rho - 0.2  # (dimensionless)
+    K3 = 2 * rho - 0.2 if k3_mul is None else k3_mul * rho - 0.2  # (dimensionless)
 
     # rate of flow dependent elimination
-
-    if gamma is not None:
-        assert isinstance(gamma, (float, list, tuple, np.ndarray)), \
-            "gamma must be float or list or tuple of two floats"
-    if gamma is None:
-        gamma, var_gamma = 0.41, 0.002
-    elif isinstance(gamma, float):
-        gamma, var_gamma = gamma, 0.002
-    elif len(gamma) == 2:
-        gamma, var_gamma = gamma[0], gamma[1]
-    elif len(gamma) == N:
-        gamma = np.array(gamma)
-    else:
-        raise ValueError("Gamma must be float or of two or N floats")
-
-    if fix:
-        Gamma = gamma * np.ones((N,))  # Rate constant for autoregulatory feedback by blood flow (1/s)
-    else:
-        Gamma = np.random.normal(gamma, np.sqrt(var_gamma) * voxelCountsSqrtInv, size=(N,))
-
-
-    # rate of signal decay
-    if k is not None:
-        assert isinstance(k, (float, list, tuple, np.ndarray)), \
-         "k must be float or list or tuple of two floats"
-
-    if k is None:
-        k, var_k = 0.65, 0.015
-    elif isinstance(k, float):
-        k, var_k  = k, 0.002
-    elif len(k)==2:
-        k, var_k = k[0], k[1]
-    elif len(k) == N:
-        k = np.array(k)
-    else:
-        raise ValueError("k must be float or of two or N floats")
-
-    if fix:
-        K = k * np.ones((N,))  # Vasodilatory signal decay (1/s)
-    else:
-        K = np.random.normal(k * np.ones(N), np.sqrt(var_k) * voxelCountsSqrtInv, size=(N,))
-
-    # hemodinamic transit time
-    if tau is not None:
-        assert isinstance(tau, (float, list, tuple, np.ndarray)), \
-            "tau must be float or list or tuple of two floats"
-
-    if tau is None:
-        tau, var_tau = 0.98, 0.0568
-    elif isinstance(tau, float):
-        tau, var_tau = tau, 0.0568
-    elif len(tau) == 2:
-        tau, var_tau = tau[0], tau[1]
-    elif len(tau) == N:
-        tau = np.array(tau)
-    else:
-        raise ValueError("tau must be float or of two or N floats")
-
-    if fix:
-        Tau = tau * np.ones((N,))  # Transit time  (s)
-    else:
-        Tau = np.random.normal(tau * np.ones(N), np.sqrt(var_tau) * voxelCountsSqrtInv, size=(N,))
 
     # initialize state variables
     # NOTE: We need to use np.copy() because these variables
@@ -201,9 +222,8 @@ def simulateBOLD(Z,
     V = np.ones((N,)) if V is None else np.copy(V)  # Blood volume
 
     BOLD = np.zeros(np.shape(Z))
-    # return integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N, rho, alpha, V0, k1, k2, k3, Gamma, K, Tau)
     BOLD, X, F, Q, V = integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N,
-                                           Rho, Alpha, V0, K1, k2, K3, Gamma, K, Tau)
+                                           rho, alpha, V0, K1, k2, K3, gamma, k, tau)
     return BOLD, X, F, Q, V
 
 
@@ -227,16 +247,13 @@ def integrateBOLD_numba(BOLD, X, Q, F, V, Z, dt, N, Rho, Alpha, V0, K1, k2, K3, 
     """
 
     EPS = 1e-120  # epsilon for softening
-    #X[0] = 0
-    #F[0] = 1
-    #V[0] = 1
-    #Q[0] = 1
 
     for i in range(len(Z[0, :])):  # loop over all timesteps
         # component-wise loop for compatibilty with numba
         for j in range(N):  # loop over all areas
             X[j] = X[j] + dt * (Z[j, i] - K[j] * X[j] - Gamma[j] * (F[j] - 1))
-            Q[j] = Q[j] + dt / Tau[j] * (F[j] / Rho[j] * (1 - (1 - Rho[j]) ** (1 / F[j])) - Q[j] * V[j] ** (1 / Alpha[j] - 1))
+            Q[j] = Q[j] + dt / Tau[j] * (
+                    F[j] / Rho[j] * (1 - (1 - Rho[j]) ** (1 / F[j])) - Q[j] * V[j] ** (1 / Alpha[j] - 1))
             V[j] = V[j] + dt / Tau[j] * (F[j] - V[j] ** (1 / Alpha[j]))
             F[j] = F[j] + dt * X[j]
 
