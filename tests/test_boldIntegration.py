@@ -1,7 +1,105 @@
 import numpy as np
 from unittest import TestCase
+import pytest
 from tmfc_simulation.boldIntegration import simulateBOLD
+from tmfc_simulation.boldIntegration import BWBoldModel
 import matplotlib.pyplot as plt
+
+
+
+class TestBWBoldModel:
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.dt = 10e-04
+        self.model = BWBoldModel(1, self.dt, fix=True)
+        self.model_random = BWBoldModel(1, self.dt, fix=False)
+        self.model100 = BWBoldModel(100, self.dt, fix=False)
+
+
+    def test_init_fix(self):
+
+        assert self.model.N == 1
+        assert np.isclose(self.model.rho, 0.34, atol=1e-03)
+        assert np.isclose(self.model.alpha, 0.32, atol=1e-03)
+        assert np.isclose(self.model.k, 0.65, atol=1e-03)
+        assert np.isclose(self.model.tau, 0.98, atol=1e-03)
+        assert self.model.X_BOLD[0] == 0.
+        assert self.model.V_BOLD[0] == 1.
+        assert self.model.Q_BOLD[0] == 1.
+        assert self.model.F_BOLD[0] == 1.
+
+    def test_init_random(self):
+
+        assert self.model_random.N == 1
+        assert 0.34-4*np.sqrt(0.0024) <= self.model_random.rho <= 0.34+4*np.sqrt(0.0024)
+        assert 0.32-4*np.sqrt(0.0015) <= self.model_random.alpha <= 0.32+4*np.sqrt(0.0015)
+        assert 0.65-4*np.sqrt(0.015) <= self.model_random.k <= 0.65+4*np.sqrt(0.015)
+        assert 0.98-4*np.sqrt(0.0568) <= self.model_random.tau <= 0.98+4*np.sqrt(0.0568)
+        assert self.model_random.X_BOLD == 0.
+        assert self.model_random.V_BOLD == 1.
+        assert self.model_random.Q_BOLD == 1.
+        assert self.model_random.F_BOLD == 1.
+
+    def test_init_model100(self):
+
+        assert self.model100.N == 100
+        assert self.model100.rho.shape == (100,)
+        assert self.model100.alpha.shape == (100,)
+        assert self.model100.gamma.shape == (100,)
+        assert self.model100.k.shape == (100,)
+        assert np.isclose(self.model100.X_BOLD, 0).all()
+        assert np.isclose(self.model100.V_BOLD, 1).all()
+        assert np.isclose(self.model100.Q_BOLD, 1).all()
+        assert np.isclose(self.model100.F_BOLD, 1).all()
+
+    def test_run_BOLD_impulse_one_node(self):
+        # Create a simple test signal
+        dt = self.model.dt
+        # time length (in seconds)
+        length = 25
+        onset = 0
+        duration = 10e-4
+        activation = np.zeros((self.model.N, int(length / dt)))
+        activation[:, int(onset / dt):int((onset + duration) / dt)] = 1
+
+        BOLD = self.model.run(activation)
+        plot = True
+        if plot:
+            plt.plot(BOLD.T)
+            plt.show()
+
+        # Basic checks:
+        assert BOLD.size == int(length/dt)
+        assert BOLD[0][0] == 0
+
+
+    def test_run_BOLD_impulse_100_node(self):
+        # Create a simple test signal
+        dt = self.model100.dt
+        # time length (in seconds)
+        length = 25
+        onset = 0
+        duration = 10e-4
+        activation = np.zeros((self.model100.N, int(length / dt)))
+        activation[:, int(onset / dt):int((onset + duration) / dt)] = 1
+
+        BOLD = self.model100.run(activation)
+        plot = True
+        if plot:
+            plt.plot(BOLD.T)
+            plt.show()
+
+        # Basic checks:
+        assert BOLD.shape == (100, int(length/dt))
+        assert (np.argmax(BOLD, axis=1) > 2000).all()
+        assert (np.argmax(BOLD, axis=1) < 10000).all()
+
+
+
+
+
+
 
 
 class TestBold(TestCase):
