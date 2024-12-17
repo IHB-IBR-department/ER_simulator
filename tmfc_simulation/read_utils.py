@@ -67,7 +67,7 @@ def generate_sw_matrices_from_mat(mat_path: str,
         one array per task
         rest matrix: matrix with synaptic connections between modules
         task_matrices: matrices with synaptic connections between modules,
-        number of matrix should correponds to number of tasks
+        number of matrix should corresponds to number of tasks
 
        num_regions (int):
             number of regions generated during the simulation

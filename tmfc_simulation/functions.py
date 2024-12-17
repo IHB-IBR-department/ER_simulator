@@ -3,7 +3,8 @@ import scipy.signal
 from scipy.signal import decimate
 
 
-def resample_signal(time, signal: np.ndarray,
+def resample_signal(time,
+                    signal: np.ndarray,
                     original_sampling_time: float,
                     new_sampling_time: float,
                     last_time: float = 0,

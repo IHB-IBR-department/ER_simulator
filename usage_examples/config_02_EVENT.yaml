@@ -1,37 +1,46 @@
 
-weigth_matrix:
+weight_matrix:
   mat_path: "../data/small_02_EVENT_[2s_TR]_[1s_DUR]_[6s_ISI]_[100_TRIALS].mat"
+  npy_path: null
   N_ROIs: 100
   sigma: 0.1
   num_modules: 4
+  num_regions_per_modules: null
   norm_type: "cols"
   gen_type: "simple_prod"
 
 sym_parameters:
+  output_type: 'syn_act'
   delay: 250
   rest_before: True
   first_duration: 6
   last_duration: 20
-  long_rest: 60
-  normalize_max: 0.001
-
+  rest_duration: 900 #in seconds
+  chunksize: 2
+  TR: 2
+  fMRI_T: 16
 
 wc_params:
-  'exc_ext': 0.758
-  'K_gl': 2.63
-  'sigma_ou': 0.0035
-  'inh_ext': 0
-  'a_exc': 1.5
-  'a_inh': 1.5
-  'c_excexc': 16
-  'c_excinh': 15
-  'c_inhexc': 12
-  'c_inhinh': 3
-  'mu_exc': 3
-  'mu_inh': 3
-  'tau_exc': 2.5
-  'tau_inh': 3.75
-  'signalV': 10
+  dt: 0.1
+  exc_ext: 0.758
+  K_gl: 2.63
+  inh_ext: 0
+  a_exc: 1.5
+  a_inh: 1.5
+  c_excexc: 16
+  c_excinh: 15
+  c_inhexc: 12
+  c_inhinh: 3
+  mu_exc: 3
+  mu_inh: 3
+  tau_exc: 2.5
+  tau_inh: 3.75
+  tau_ou: 5.0  # ms timescale of the Ornstein-Uhlenbeck noise process
+  sigma_ou: 0.0035 # noise intensity
+  exc_ou_mean: 0.0  # mean of OU process for excitatory input
+  inh_ou_mean: 0.0  # mean of OU process for inhibitory input
+  signalV: 10
+
 
 
 bw_params:
@@ -51,16 +60,13 @@ bw_params:
     value: 0.34
     variance: 0.0096  # 0.0024 * 4
 
-  normalize_max: 1.0
-  length: 32 #time length (in seconds)
-  duration: 0.001
+  normalize_max: 0.001
+  length: 32 #time length for saving bold (in seconds)
 
 
-time_resolution:
-  TR: 2
-  fMRI_T: 16
 
-rest_duration: 900 #in seconds
+
+
 
 
 

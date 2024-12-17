@@ -30,7 +30,7 @@ def time_integration(params: Dict) -> Tuple[npt.NDArray[np.float64], ...]:  # Sp
         simulation_steps is the total number of time steps in the simulation.
 
     Raises:
-        KeyError: If any required parameter is missing from the 'params' dictionary.
+        KeyError: If any required parameter is missing from the 'wc_params' dictionary.
 
     Notes:
       This function uses the Euler method for numerical integration. More advanced integration methods could be implemented for greater accuracy.
@@ -41,50 +41,50 @@ def time_integration(params: Dict) -> Tuple[npt.NDArray[np.float64], ...]:  # Sp
     # --- Parameter Extraction and Validation ---
     try:  # Use a try-except block to catch missing parameters
 
-        dt = params["dt"]  # Time step for the Euler intergration (ms)
-        duration = params["duration_list"]  # simulation duration_list (ms)
-        RNGseed = params["seed"]  # seed for RNG
+        dt = params["dt"] if params["dt"] else 0.1  # Time step for the Euler intergration (ms)
+        duration = params["duration"] if params["duration"] else 2000  # simulation duration_list (ms)
+        RNGseed = params["seed"] if params["seed"] else None  # seed for RNG
 
         # ------------------------------------------------------------------------
         # local parameters
         # See Papadopoulos et al., Relations between large-scale brain connectivity and effects of regional stimulation
         # depend on collective dynamical state, arXiv, 2020
-        tau_exc = params["tau_exc"]  #
-        tau_inh = params["tau_inh"]  #
-        c_excexc = params["c_excexc"]  #
-        c_excinh = params["c_excinh"]  #
-        c_inhexc = params["c_inhexc"]  #
-        c_inhinh = params["c_inhinh"]  #
-        a_exc = params["a_exc"]  #
-        a_inh = params["a_inh"]  #
-        mu_exc = params["mu_exc"]  #
-        mu_inh = params["mu_inh"]  #
+        tau_exc = params["tau_exc"] if params["tau_exc"] else 2.5 #
+        tau_inh = params["tau_inh"] if params["tau_inh"] else 3.75  #
+        c_excexc = params["c_excexc"] if params["c_excexc"] else 16 #
+        c_excinh = params["c_excinh"] if params["c_excinh"] else 15 #
+        c_inhexc = params["c_inhexc"] if params["c_inhexc"] else 12#
+        c_inhinh = params["c_inhinh"] if params["c_inhinh"] else 3 #
+        a_exc = params["a_exc"] if params["a_exc"] else 1.5 #
+        a_inh = params["a_inh"] if params["a_inh"] else 1.5 #
+        mu_exc = params["mu_exc"] if params["mu_exc"] else 3 #
+        mu_inh = params["mu_inh"] if params["mu_inh"] else 3 #
 
         # external input parameters:
         # Parameter of the Ornstein-Uhlenbeck process for the external input(ms)
-        tau_ou = params["tau_ou"]
+        tau_ou = params["tau_ou"] if params["tau_ou"] else 5.0
         # Parameter of the Ornstein-Uhlenbeck (OU) process for the external input ( mV/ms/sqrt(ms) )
-        sigma_ou = params["sigma_ou"]
+        sigma_ou = params["sigma_ou"] if params["sigma_ou"] else 0.0035
         # Mean external excitatory input (OU process)
-        exc_ou_mean = params["exc_ou_mean"]
+        exc_ou_mean = params["exc_ou_mean"] if params["exc_ou_mean"] else 0.0
         # Mean external inhibitory input (OU process)
-        inh_ou_mean = params["inh_ou_mean"]
+        inh_ou_mean = params["inh_ou_mean"] if params["inh_ou_mean"] else 0.0
 
         # ------------------------------------------------------------------------
         # global coupling parameters
+        K_gl = params["K_gl"]  # global coupling strength
 
         # Connectivity matrix
         # Interareal relative coupling strengths (values between 0 and 1), Cmat(i,j) connection from jth to ith
         Cmat = params["Cmat"]
         N = len(Cmat)  # Number of nodes
-        K_gl = params["K_gl"]  # global coupling strength
         # Interareal connection delay
         lengthMat = params["lengthMat"]
         signalV = params["signalV"]
     except KeyError as e:
         raise KeyError(f"Missing required parameter: {e}")
 
-    if N == 1:
+    if (N == 1) or (lengthMat is None):
         Dmat = np.zeros((N, N))
     else:
         # Interareal connection delays, Dmat(i,j) Connnection from jth node to ith (ms)
@@ -102,8 +102,8 @@ def time_integration(params: Dict) -> Tuple[npt.NDArray[np.float64], ...]:  # Sp
     startind = int(max_global_delay + 1)  # timestep to start integration at
 
     # noise variable
-    exc_ou = params["exc_ou"].copy()+np.zeros((N,))
-    inh_ou = params["inh_ou"].copy()+np.zeros((N,))
+    exc_ou = params["exc_ou"]+np.zeros((N,))
+    inh_ou = params["inh_ou"]+np.zeros((N,))
 
     # state variable arrays, have length of t + startind
     # they store initial conditions AND simulated data
@@ -119,7 +119,10 @@ def time_integration(params: Dict) -> Tuple[npt.NDArray[np.float64], ...]:  # Sp
     # ------------------------------------------------------------------------
     # Set initial values
     # if initial values are just a Nx1 array
-    if np.shape(params["exc_init"])[1] == 1:
+    if params["exc_init"] is None:
+        exc_init = 0.05 * np.random.uniform(0, 1, (N, 1))
+        inh_init = 0.05 * np.random.uniform(0, 1, (N, 1))
+    elif np.shape(params["exc_init"])[1] == 1:
         exc_init = np.dot(params["exc_init"], np.ones((1, startind)))
         inh_init = np.dot(params["inh_init"], np.ones((1, startind)))
     # if initial values are a Nxt array

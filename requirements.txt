@@ -1,3 +1,10 @@
 neurolib
 matplotlib
 seaborn
+pytest
+numpy
+scipy
+xarray
+PyYAML
+numba
+tqdm

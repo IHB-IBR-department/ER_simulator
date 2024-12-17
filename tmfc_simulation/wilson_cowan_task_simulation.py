@@ -75,7 +75,7 @@ class WCTaskSim:
             normalize_max (float):
                 normalizing constant for bold input transformation
             output_activation (str):
-                type of output_type activation to pass to bold signal, possible params: 'syn_act', 'sum'
+                type of output_type activation to pass to bold signal, possible wc_params: 'syn_act', 'sum'
             exc_ext (float):
                 excitation parameter
             K_gl (float):
@@ -611,7 +611,7 @@ class WCTaskSim:
         first_rest = self.first_duration
         last_rest = self.last_duration
         TR = self.TR
-        #dt = self.wc.params["dt"]
+        #dt = self.wc.wc_params["dt"]
         input_data = io.loadmat(mat_path)
         num_tasks = input_data['onsets'].shape[1]
         onsets_list = []

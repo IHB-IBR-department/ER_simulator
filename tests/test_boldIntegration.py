@@ -95,8 +95,40 @@ class TestBWBoldModel:
         assert (np.argmax(BOLD, axis=1) > 2000).all()
         assert (np.argmax(BOLD, axis=1) < 10000).all()
 
+    def test_run_on_impulse(self):
+
+        BOLD, time = self.model100.run_on_impulse()
+        plot = True
+        if plot:
+            plt.plot(time,BOLD.T)
+            plt.show()
+        assert BOLD.shape == (100, int(self.model100.length/self.model100.dt))
+        assert (np.argmax(BOLD, axis=1) > 2000).all()
+        assert (np.argmax(BOLD, axis=1) < 10000).all()
 
 
+    def test_save_parameters_npy(self):
+
+        file_path = 'test100.npy'
+        self.model100.save_parameters('test100.npy', s_type='npy')
+        data = np.load(file_path, allow_pickle=True)
+        assert (data.item()['rho'] == self.model100.rho).all()
+        assert "alpha" in data.item().keys()
+        assert "tau" in data.item().keys()
+        assert "gamma" in data.item().keys()
+
+
+    def test_save_parameters_mat(self):
+
+        from scipy import io
+        self.model100.save_parameters('test100.mat', s_type='mat')
+        data = io.loadmat('test100.mat')
+
+        assert (data['rho'] == self.model100.rho).all()
+        assert "alpha" in data.keys()
+        assert "tau" in data.keys()
+        assert "gamma" in data.keys()
+        assert True
 
 
 

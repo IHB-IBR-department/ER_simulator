@@ -5,7 +5,7 @@ def test_simple_one_node():
     exc_ext = 1.5
     wc = simple_one_node(exc_ext=exc_ext)
 
-    plt.plot(wc.exc[0, -int(1000 / wc.params['dt']):])
+    plt.plot(wc.exc[0, -int(1000 / wc.wc_params['dt']):])
     plt.show()
     assert False
 

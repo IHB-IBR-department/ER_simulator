@@ -2,6 +2,8 @@ import numpy as np
 import numba
 from typing import Optional, Union
 import numpy.typing as npt
+from tmfc_simulation.functions import resample_signal
+
 
 
 class BWBoldModel(object):
@@ -19,7 +21,9 @@ class BWBoldModel(object):
                  gamma: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
                  k: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
                  tau: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
-                 fix: bool = False):
+                 seed: Optional[Union[int, np.random.RandomState]] = None,
+                 fix: bool = False,
+                 length: int = 32):
         """
         Initialize the BWBoldModel.
 
@@ -41,8 +45,10 @@ class BWBoldModel(object):
         :type tau: Optional[Union[float, tuple[float, float], list[float, float],  npt.NDArray[np.float64]]]], optional
         """
         self.N = N
+        self.length = length
         self.dt = dt
         self.normalize_constant = normalize_constant
+        self.seed = seed
         self._init_parameters(rho, alpha, gamma, k, tau, fix=fix)
 
         # initialize BOLD model variables
@@ -57,6 +63,7 @@ class BWBoldModel(object):
 
     def run(self, activity):
         # Compute the BOLD signal for the chunk
+        activity = activity*self.normalize_constant
         BOLD, self.X_BOLD, self.F_BOLD, self.Q_BOLD, self.V_BOLD = simulateBOLD(
             activity,
             self.dt,
@@ -71,6 +78,22 @@ class BWBoldModel(object):
             V=self.V_BOLD,
         )
         return BOLD
+
+    def run_on_impulse(self,
+                       down_dt=0.125):
+        # Create a simple test signal
+        dt = self.dt
+        # time length (in seconds)
+        length = self.length
+        onset = 0
+        duration = 10e-4
+        activation = np.zeros((self.N, int(length / dt)))
+        time = np.linspace(0, length, int(length / dt))
+        activation[:, int(onset / dt):int((onset + duration) / dt)] = 1
+        BOLD = self.run(activation)
+        resampled_BOLD, time = resample_signal(time, BOLD, dt, down_dt)
+
+        return resampled_BOLD, time
 
     def save_parameters(self, filepath, s_type='mat'):
         """Saves the model parameters rho, alpha, gamma, k, tau.
@@ -96,14 +119,20 @@ class BWBoldModel(object):
         elif s_type == 'npy':
             np.save(filepath, params)
         elif s_type == 'hdf5':
-            import h5py
-            with h5py.File(filepath, 'w') as hf:
-                for key, value in params.items():
-                    hf.create_dataset(key, data=value)
+            try:
+                import h5py
+                with h5py.File(filepath, 'w') as hf:
+                    for key, value in params.items():
+                        hf.create_dataset(key, data=value)
+            except ImportError:
+                print("h5py not installed, skipping saving parameters in HDF5 format.")
+
         else:
             raise ValueError("Unsupported s_type. Choose from 'mat', 'npy', or 'hdf5'.")
 
     def _init_parameters(self, rho, alpha, gamma, k, tau, fix=True):
+
+        np.random.seed(self.seed)
         def process_param(param, default_mean, default_var, param_name):
             """Helper function to process parameters."""
             voxelCounts = np.ones((self.N,))

@@ -9,7 +9,7 @@ class dotdict(dict):
     __delattr__ = dict.__delitem__
 
 
-def load_wc_params(Cmat=None, Dmat=None, seed=None, config_file="params.yaml"):
+def load_wc_params(Cmat=None, Dmat=None, seed=None, config_file="wc_params.yaml"):
     """
     Load parameters for the Wilson-Cowan model from a YAML configuration file.
 
@@ -22,7 +22,7 @@ def load_wc_params(Cmat=None, Dmat=None, seed=None, config_file="params.yaml"):
     :type Dmat: numpy.ndarray, optional
     :param seed: Seed for the random number generator, defaults to None
     :type seed: int, optional
-    :param config_file: Path to the YAML configuration file, defaults to "params.yaml"
+    :param config_file: Path to the YAML configuration file, defaults to "wc_params.yaml"
     :type config_file: str, optional
 
     :return: A dictionary with the default parameters of the model

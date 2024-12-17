@@ -1,6 +1,68 @@
 import numpy as np
 from typing import Optional, Union
 import numpy.typing as npt
+from .wc_model import WCTaskSim
+from .functions import resample_signal
+
+
+
+def _check_output(output_dict):
+    neural_name_list = [k for k, v in output_dict.items() if k in ["syn_act", "exc", "inh"]]
+    if output_dict["BOLD"] is not None:
+        neural_name_list.extend(["BOLD"])
+    return neural_name_list
+
+def compute_bold_connectivity_TR(wc_obj: WCTaskSim, tune_time=1):
+    assert isinstance(wc_obj, WCTaskSim), "Input should be a WCTaskSim object"
+    onset_time_list = wc_obj.onset_time_list
+    task_name_list = wc_obj.task_name_list
+    bold_series = wc_obj.output['BOLD_TR']
+    tr_time = wc_obj.output['TR_time']
+    connectivity_dict = {}
+    for task_name in task_name_list:
+        task_series = extract_task_data(task_name,
+                                        bold_series,
+                                        tr_time,
+                                        onset_time_list,
+                                        task_name_list,
+                                        tune_time=tune_time)
+        connectivity_dict[task_name] = np.corrcoef(task_series)
+    return connectivity_dict
+
+
+def compute_connectivity(wc_obj, neural_name, tune_time=1):
+    assert isinstance(wc_obj, WCTaskSim), "Input should be a WCTaskSim object"
+    neural_name_list = _check_output(wc_obj.output)
+    assert neural_name in neural_name_list, "Neural name should be in {}".format(neural_name_list)
+    onset_time_list = wc_obj.onset_time_list
+    task_name_list = wc_obj.task_name_list
+    # Compute correlation matrix
+    connectivity_dict = {}
+    for task_name in task_name_list:
+        task_series = extract_task_data(task_name,
+                                        wc_obj.output[neural_name],
+                                        wc_obj.output["mtime"],
+                                        onset_time_list,
+                                        task_name_list,
+                                        tune_time=tune_time)
+        connectivity_dict[task_name] = np.corrcoef(task_series)
+    return connectivity_dict
+
+
+def extract_task_data(task_name, series, mtime, onset_time_list, task_name_list, tune_time=1):
+    task_indices = [i for i, t in enumerate(task_name_list) if t == task_name]
+    series_list = []
+    for i_task in task_indices:
+        start_time = onset_time_list[i_task] + tune_time
+        end_time = onset_time_list[i_task + 1]
+
+        # Find corresponding indices in mtime
+        start_index = np.argmax(mtime >= start_time)
+        end_index = np.argmax(mtime >= end_time)
+
+        # Extract time series for the current task
+        series_list.append(series[:, start_index:end_index])
+    return np.concatenate(series_list, axis=1)
 
 
 def create_task_design_activation(onsets_list: list[list],
@@ -121,6 +183,6 @@ def create_reg_activations(activations_by_module,
     reg_activation = np.zeros((num_regions, activations_by_module.shape[1]))
     last_filled_region = 0
     for m in range(num_modules):
-        reg_activation[last_filled_region:last_filled_region+num_regions_per_modules[m], :] = activations_by_module[m]
+        reg_activation[last_filled_region:last_filled_region + num_regions_per_modules[m], :] = activations_by_module[m]
         last_filled_region += num_regions_per_modules[m]
     return reg_activation
