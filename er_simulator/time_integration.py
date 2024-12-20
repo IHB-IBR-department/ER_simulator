@@ -2,7 +2,7 @@ import numpy as np
 import numba
 import numpy.typing as npt
 from typing import Dict, Tuple
-from tmfc_simulation import model_utils as mu
+from er_simulator import model_utils as mu
 
 
 # Adapted from https://github.com/neurolib-dev/neurolib
@@ -147,7 +147,7 @@ def time_integration(params: Dict) -> Tuple[npt.NDArray[np.float64], ...]:  # Sp
     noise_inh = np.zeros((N,))
 
     # ------------------------------------------------------------------------
-    integr_params = [startind,t, dt, sqrt_dt, N, Cmat, K_gl, Dmat_ndt,
+    integr_params = [startind, t, dt, sqrt_dt, N, Cmat, K_gl, Dmat_ndt,
                      excs, inhs, exc_input_d, inh_input_d, exc_ext_baseline, inh_ext_baseline,
                      exc_ext, inh_ext, tau_exc, tau_inh, a_exc, a_inh, mu_exc, mu_inh,
                      c_excexc, c_excinh, c_inhexc, c_inhinh, noise_exc, noise_inh, exc_ou, inh_ou,

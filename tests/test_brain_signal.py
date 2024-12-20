@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 import xarray
-from tmfc_simulation.brain_signal import BrainSignal
+from er_simulator.brain_signal import BrainSignal
 import numpy as np
 
 

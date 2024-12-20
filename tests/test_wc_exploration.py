@@ -1,4 +1,4 @@
-from tmfc_simulation.wc_exploration import simple_one_node, ito_version
+from er_simulator.wc_exploration import simple_one_node, ito_version
 import matplotlib.pyplot as plt
 
 def test_simple_one_node():

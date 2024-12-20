@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import yaml
-from tmfc_simulation.load_wc_params import load_wc_params
+from er_simulator.load_wc_params import load_wc_params
 from collections import namedtuple
 
 # Create a dummy dotdict for testing
@@ -57,7 +57,7 @@ def test_load_wc_params_seed():
     assert np.allclose(params1.inh_init, params2.inh_init)
 
 def test_load_actual_params():
-    params = load_wc_params(config_file="../tmfc_simulation/wc_params.yaml")
+    params = load_wc_params(config_file="../er_simulator/wc_params.yaml")
 
     assert params.dt == 0.1
 

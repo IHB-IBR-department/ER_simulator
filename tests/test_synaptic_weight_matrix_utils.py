@@ -1,4 +1,4 @@
-from tmfc_simulation.synaptic_weights_matrices import generate_synaptic_weights_matrices
+from er_simulator.synaptic_weights_matrices import generate_synaptic_weights_matrices
 import numpy as np
 import matplotlib.pyplot as plt
 from unittest import TestCase

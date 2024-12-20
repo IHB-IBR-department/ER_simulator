@@ -1,15 +1,13 @@
 import pytest
-import cProfile
 import time
 import pstats
-from tmfc_simulation.wc_model import WCTaskSim
-from tmfc_simulation.load_wc_params import load_wc_params
+from er_simulator.wc_model import WCTaskSim
+from er_simulator.load_wc_params import load_wc_params
+from er_simulator.functions import resample_signal
+from er_simulator.boldIntegration import BWBoldModel
+from er_simulator.synaptic_weights_matrices import normalize, generate_synaptic_weights_matrices
 import numpy as np
 from matplotlib import pyplot as plt
-from tmfc_simulation.functions import resample_signal
-from tmfc_simulation.boldIntegration import BWBoldModel
-from tmfc_simulation.synaptic_weights_matrices import normalize, generate_synaptic_weights_matrices
-
 
 class TestWCTaskSimBasic:
 
@@ -18,7 +16,7 @@ class TestWCTaskSimBasic:
         """Sets up default parameters for WCTaskSim tests."""
 
         # Use load_wc_params to load default parameters or provide a test YAML
-        self.wc_params = load_wc_params(config_file="../tmfc_simulation/wc_params.yaml")  # Replace with your config
+        self.wc_params = load_wc_params(config_file="../er_simulator/wc_params.yaml")  # Replace with your config
 
         # Create a dummy Cmat and Dmat if needed
         N = 3  # Example number of nodes
@@ -61,7 +59,7 @@ class TestWCTaskSimBasic:
                          [0.78922074, 0., 0.18792139],
                          [0.26950525, 0.49619214, 0.]])
         D = 250 * np.ones((N, N))
-        wc_params = load_wc_params(config_file="../tmfc_simulation/wc_params.yaml")
+        wc_params = load_wc_params(config_file="../er_simulator/wc_params.yaml")
         sim = WCTaskSim(wc_params,
                         C_rest=Cmat,
                         D=D,
@@ -76,6 +74,11 @@ class TestWCTaskSimBasic:
         sim.wc_params['exc_init'] = np.array([[0.01347526], [0.02480961], [0.03695609]])
         sim.wc_params['inh_init'] = np.array([[0.0097476], [0.00898726], [0.02694131]])
         return sim
+
+    def test_init_from_config(self):
+        sim = WCTaskSim.from_config(config_file="../usage_examples/config_02_EVENT.yaml")
+        #sim.generate_full_series(compute_bold=True)
+        assert isinstance(sim, WCTaskSim)
 
     def test_complete_onsets_with_rest_empty_input(self):
         sim = WCTaskSim(self.wc_params, rest_before=3, rest_after=3)  # Pass wc_params to the constructor
@@ -322,6 +325,7 @@ class TestWCTaskSimFull:
 
     @pytest.fixture(autouse=True)
     def setup(self):
+        np.random.seed(42)
         num_regions = 30
         num_modules = 3
         X = 0.9
@@ -371,25 +375,31 @@ class TestWCTaskSimFull:
     def test_generate_series(self):
 
         TR = 2
-        fMRI_T = 16
+        fMRI_T = 100
         rest_before = 6
         wc_block = WCTaskSim(C_rest=self.C_rest,
                              C_task_dict=self.C_task_dict,
                              D=self.D,
                              TR=TR,
                              fMRI_T=fMRI_T,
-                             rest_before=rest_before,
+                             rest_before=0,
                              rest_after=0,
-                             rest_duration=10,
+                             output_type="all",
+                             rest_duration=2,
                              duration_list=3)
         wc_block.generate_full_series(compute_bold=False)
 
-        plot = True
+        plot = False
         if plot:
             tune = int(rest_before / (TR / fMRI_T))
             plt.plot(wc_block.output['syn_act'][0:10, tune:].T)
             plt.plot(wc_block.output['syn_act'][10:20, tune:].T)
             plt.show()
+
+        mean_exc = wc_block.output['exc'].mean(axis=1)
+        mean_inh = wc_block.output['inh'].mean(axis=1)
+        mean_sa = wc_block.output['syn_act'].mean(axis=1)
+        corr_exc = np.corrcoef(wc_block.output['exc'])
 
         assert wc_block.output['syn_act'].shape[0] == 30
         assert wc_block.mTime == TR / fMRI_T

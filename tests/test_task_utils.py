@@ -1,8 +1,8 @@
 from unittest import TestCase
-from tmfc_simulation.task_utils import (create_task_design_activation,
-                                        module_activation,
-                                        create_activations_per_module,
-                                        create_reg_activations)
+from er_simulator.task_utils import (create_task_design_activation,
+                                     module_activation,
+                                     create_activations_per_module,
+                                     create_reg_activations)
 import matplotlib.pyplot as plt
 import numpy as np
 

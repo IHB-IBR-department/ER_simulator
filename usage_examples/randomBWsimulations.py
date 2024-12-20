@@ -1,7 +1,7 @@
-from tmfc_simulation.read_utils import generate_sw_matrices_from_mat
-from tmfc_simulation.boldIntegration import simulateBOLD
+from er_simulator.read_utils import generate_sw_matrices_from_mat
+from er_simulator.boldIntegration import simulateBOLD
 from scipy.signal import decimate
-from tmfc_simulation.wilson_cowan_task_simulation import WCTaskSim
+from er_simulator.wilson_cowan_task_simulation import WCTaskSim
 import yaml
 import numpy as np
 import os
@@ -28,7 +28,7 @@ fMRI_T = config['time_resolution']['fMRI_T']
 micro_dt = TR/fMRI_T
 
 # Synaptic weight matrix block generation
-from tmfc_simulation.read_utils import generate_sw_matrices_from_mat
+from er_simulator.read_utils import generate_sw_matrices_from_mat
 
 Wij_rest, Wij_task_dict = generate_sw_matrices_from_mat(mat_path, N_ROIs, num_modules=NUM_MODULES,
                                  sigma=SIGMA, norm_type=NORM_TYPE, gen_type = GEN_TYPE)

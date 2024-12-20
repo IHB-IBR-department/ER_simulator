@@ -1,11 +1,11 @@
 import pytest
 import numpy as np
-from tmfc_simulation.load_wc_params import load_wc_params
-from tmfc_simulation.time_integration import time_integration
+from er_simulator.load_wc_params import load_wc_params
+from er_simulator.time_integration import time_integration
 
 @pytest.fixture(scope="module")
 def params():
-    return load_wc_params(config_file="../tmfc_simulation/wc_params.yaml")
+    return load_wc_params(config_file="../er_simulator/wc_params.yaml")
 
 def test_time_integration(params):
 

@@ -1,8 +1,8 @@
 from unittest import TestCase
-from tmfc_simulation import functions
-from tmfc_simulation.wilson_cowan_task_simulation import WCTaskSim, HRF
-from tmfc_simulation.synaptic_weights_matrices import normalize, generate_synaptic_weights_matrices
-from tmfc_simulation.read_utils import read_onsets_from_mat, generate_sw_matrices_from_mat
+from er_simulator import functions
+from er_simulator.wilson_cowan_task_simulation import WCTaskSim, HRF
+from er_simulator.synaptic_weights_matrices import normalize, generate_synaptic_weights_matrices
+from er_simulator.read_utils import read_onsets_from_mat, generate_sw_matrices_from_mat
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt

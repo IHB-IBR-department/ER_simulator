@@ -2,7 +2,7 @@
 weight_matrix:
   mat_path: "../data/small_02_EVENT_[2s_TR]_[1s_DUR]_[6s_ISI]_[100_TRIALS].mat"
   npy_path: null
-  N_ROIs: 100
+  num_regions: 100
   sigma: 0.1
   num_modules: 4
   num_regions_per_modules: null
@@ -12,13 +12,12 @@ weight_matrix:
 sym_parameters:
   output_type: 'syn_act'
   delay: 250
-  rest_before: True
-  first_duration: 6
-  last_duration: 20
+  rest_before: 12
+  rest_after: 8
   rest_duration: 900 #in seconds
   chunksize: 2
   TR: 2
-  fMRI_T: 16
+  fMRI_T: 400
 
 wc_params:
   dt: 0.1
@@ -43,7 +42,7 @@ wc_params:
 
 
 
-bw_params:
+bold_params:
   k:
     value: 0.65
     variance: 0.015
@@ -60,7 +59,8 @@ bw_params:
     value: 0.34
     variance: 0.0096  # 0.0024 * 4
 
-  normalize_max: 0.001
+  fix: False
+  normalize_constant: 0.001
   length: 32 #time length for saving bold (in seconds)
 
 

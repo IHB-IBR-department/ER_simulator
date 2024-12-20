@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from tmfc_simulation.functions import resample_signal
+from er_simulator.functions import resample_signal
 from matplotlib import pyplot as plt
 from scipy.signal import decimate
 

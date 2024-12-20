@@ -2,10 +2,10 @@ import numpy as np
 import yaml
 from typing import Optional, Union, Dict
 import numpy.typing as npt
-from tmfc_simulation.load_wc_params import load_wc_params
-from tmfc_simulation.time_integration import time_integration
-from tmfc_simulation.functions import resample_signal
-from tmfc_simulation.boldIntegration import BWBoldModel
+from er_simulator.load_wc_params import load_wc_params
+from er_simulator.time_integration import time_integration
+from er_simulator.functions import resample_signal
+from er_simulator.boldIntegration import BWBoldModel
 from .read_utils import generate_sw_matrices_from_mat
 from .read_utils import read_onsets_from_mat
 
@@ -129,7 +129,7 @@ class WCTaskSim:
 
         mat_path = config['weight_matrix'].get("mat_path", None)
         #npy_path = config['weight_matrix'].get("npy_path", None)
-        num_regions = config['weight_matrix'].get("num_regions", 100)
+        num_regions = config['weight_matrix'].get("num_regions", 30)
         sigma = config['weight_matrix'].get("sigma", 0.1)
         num_modules = config['weight_matrix'].get("num_modules", 3)
         num_regions_per_modules = config['weight_matrix'].get("num_regions_per_modules", None)
@@ -261,6 +261,9 @@ class WCTaskSim:
         :param compute_bold:
         :return:
         """
+        #clear all outputs
+        for key in self.output.keys():
+            self.output[key] = None
 
         lastT = self.onset_time_list[0]
 
@@ -280,6 +283,23 @@ class WCTaskSim:
                                                                              self.output['BOLD'],
                                                                              self.mTime,
                                                                              self.TR)
+            self.boldModel.reset_state()
+
+    def get_task_block(self, task_name, out_tname, out_sname, skip_time=6):
+        indexes = [i for i, value in enumerate(self.task_name_list) if value == task_name]
+        times = [(self.onset_time_list[idx], self.onset_time_list[idx + 1]) for idx in indexes]
+        time_idxs = [
+            (np.searchsorted(self.output[out_tname], time[0], side='right'),
+             np.searchsorted(self.output[out_tname], time[1], side='right') - 1)
+            for time in times]
+        skip_idx = np.searchsorted(self.output[out_tname],
+                                   skip_time, side='right') - np.searchsorted(self.output[out_tname],
+                                                                              0, side='right')
+        series_list = []
+        for idxs in time_idxs:
+            series_list.append(self.output[out_sname][:, idxs[0] + skip_idx: idxs[1]])
+        concat_series = np.concatenate(series_list, axis=1)
+        return concat_series
 
     def _generate_chunk_with_onsets(self,
                                     start_time):
@@ -319,9 +339,9 @@ class WCTaskSim:
         elif self.output_type == "all":
             out_dict["exc"], _ = resample_signal(t, excs, self.wc_params['dt'] / 1000, self.mTime,
                                                  last_time=last_t / 1000)
-            out_dict["inh"], _ = resample_signal(t, syn_act, self.wc_params['dt'] / 1000, self.mTime,
+            out_dict["inh"], _ = resample_signal(t, inhs, self.wc_params['dt'] / 1000, self.mTime,
                                                  last_time=last_t / 1000)
-            out_dict["syn_act"], time = resample_signal(t, inhs, self.wc_params['dt'] / 1000, self.mTime,
+            out_dict["syn_act"], time = resample_signal(t, syn_act, self.wc_params['dt'] / 1000, self.mTime,
                                                         last_time=last_t / 1000)
 
         if self.compute_bold:
@@ -345,6 +365,7 @@ class WCTaskSim:
                                     Cmat: npt.NDArray[np.float64],
                                     duration: float,
                                     update_inits: bool = False):
+        np.fill_diagonal(Cmat, 0)
         self.wc_params['Cmat'] = Cmat
         self.wc_params['duration'] = duration
         for init_var in self.init_vars:
@@ -511,15 +532,14 @@ class WCTaskSim:
     @staticmethod
     def _set_bold_dict(bold_params: Optional[dict]) -> dict:
 
-        bw_keys = ["normalize_constant", "rho", "alpha", "gamma", "tau", "k", "fix", "length"]
-        bold_params_default = {"normalize_constant": 0.001,
+        bw_keys = ["normalize_constant", "rho", "alpha", "gamma", "tau", "k", "fix"]
+        bold_params_default = {"normalize_constant": 2,
                                "fix": True,
                                "rho": 0.34,
                                "alpha": 0.32,
                                "gamma": 0.41,
                                "tau": 2.5,
-                               "k": 0.65,
-                               "length": 32}
+                               "k": 0.65}
 
         if bold_params is None:
             bold_params = {}
@@ -541,6 +561,7 @@ class WCTaskSim:
                    "exc_ext", "inh_ext", "exc_init", "inh_init", "K_gl", "signalV",
                    "lengthMat", "Cmat"]
         wc_params_default = {"dt": 0.1,
+                             "seed": None,
                              "tau_exc": 2.5,
                              "tau_inh": 3.75,
                              "c_excexc": 16,
@@ -552,18 +573,18 @@ class WCTaskSim:
                              "mu_exc": 3,
                              "mu_inh": 3,
                              "tau_ou": 5.0,
-                             "sigma_ou": 0.0035,
+                             "sigma_ou": 0.005,
                              "exc_ou_mean": 0.,
                              "exc_ext_baseline": 0,
                              "inh_ext_baseline": 0,
                              "inh_ext": 0,
-                             "exc_ext": 0,
+                             "exc_ext": 0.75,
                              "inh_ou_mean": 0.,
                              "exc_ou": 0,
                              "inh_ou": 0,
                              "exc_init": None,
                              "inh_init": None,
-                             "K_gl": 2.63,
+                             "K_gl": 2.85,
                              "signalV": 10,
                              "lengthMat": None,
                              "Cmat": None}

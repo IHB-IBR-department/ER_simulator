@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from tmfc_simulation.model_utils import adjustArrayShape  # Assuming your function is here
+from er_simulator.model_utils import adjustArrayShape  # Assuming your function is here
 
 def test_adjustArrayShape_scalar():
     target = np.zeros((2, 3))

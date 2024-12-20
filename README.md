@@ -45,16 +45,17 @@ A detailed example is available in `01Ex.SynapticMatrixGeneration.ipynb`.
 The primary procedures for function generation are implemented within the `generate_synaptic_weights_matrices function`. We propose adopting a matrix structure characterized by blockwise segmentation, aligning with the brain's modular organization. The strength of correlations within and between these modules dictates the composition of the entire matrix. The number of regions within each module may either be equivalent, unless explicitly specified by the user, or non-equivalent, with the user providing the requisite information, ensuring that the cumulative count aligns with the total number of regions. Two distinct generation approaches are facilitated: one entails equal variance within each block (default option), and the other is contingent on variance proportional to a scaling factor.
 
 ```python
-from tmfc_simulation.synaptic_weights_matrices import generate_synaptic_weights_matrices
+from er_simulator.synaptic_weights_matrices import generate_synaptic_weights_matrices
 import numpy as np
 import matplotlib.pyplot as plt
+
 num_regions = 30
 num_modules = 3
 factors = np.array([[0.9, 0.5, 0.1],
-           [0.5, 0.9, 0.1],
-           [0.1, 0.1, 0.9]])
-weight_matrix = generate_synaptic_weights_matrices(num_regions, 
-                                                    num_modules, 
+                    [0.5, 0.9, 0.1],
+                    [0.1, 0.1, 0.9]])
+weight_matrix = generate_synaptic_weights_matrices(num_regions,
+                                                   num_modules,
                                                    factors=factors)
 plt.imshow(weight_matrix);
 ```
@@ -74,40 +75,39 @@ Examples of .mat files can be found in the data folder. [data folder](data)
 Python scripts for generation from scratch:
 
 ```python
-from tmfc_simulation.wilson_cowan_task_simulation import WCTaskSim, HRF
-from tmfc_simulation.synaptic_weights_matrices import normalize, generate_synaptic_weights_matrices
-from tmfc_simulation.read_utils import read_onsets_from_mat, generate_sw_matrices_from_mat
+from er_simulator.wilson_cowan_task_simulation import WCTaskSim, HRF
+from er_simulator.synaptic_weights_matrices import normalize, generate_synaptic_weights_matrices
+from er_simulator.read_utils import read_onsets_from_mat, generate_sw_matrices_from_mat
 import numpy as np
 
-
-#setup with task and rest synaptic weight matrix, number of regions and modules 
+# setup with task and rest synaptic weight matrix, number of regions and modules 
 
 num_regions = 30
 num_modules = 3
 X = 0.9
 Z = 0.5
 rest_factors = np.array([[X, 0.1, 0.1],
-                                 [0.1, X, 0.1],
-                                 [0.1, 0.1, X]])
+                         [0.1, X, 0.1],
+                         [0.1, 0.1, X]])
 taskA_factors = np.array([[X, Z, 0.1],
-                                  [Z, X, 0.1],
-                                  [0.1, 0.1, X]])
+                          [Z, X, 0.1],
+                          [0.1, 0.1, X]])
 taskB_factors = np.array([[X, 0.1, Z],
-                                  [0.1, X, 0.1],
-                                  [Z, 0.1, X]])
+                          [0.1, X, 0.1],
+                          [Z, 0.1, X]])
 
 c_rest = generate_synaptic_weights_matrices(num_regions,
-                                                    num_modules,
-                                                    factors=rest_factors,
-                                                    sigma=0.1)
+                                            num_modules,
+                                            factors=rest_factors,
+                                            sigma=0.1)
 c_task_a = generate_synaptic_weights_matrices(num_regions,
-                                                      num_modules,
-                                                      factors=taskA_factors,
-                                                      sigma=0.1)
+                                              num_modules,
+                                              factors=taskA_factors,
+                                              sigma=0.1)
 c_task_b = generate_synaptic_weights_matrices(num_regions,
-                                                      num_modules,
-                                                      factors=taskB_factors,
-                                                      sigma=0.1)
+                                              num_modules,
+                                              factors=taskB_factors,
+                                              sigma=0.1)
 D = np.ones((num_regions, num_regions)) * 250
 np.fill_diagonal(cls.D, 0)
 norm_type = "cols"
@@ -116,36 +116,35 @@ c_task_a = normalize(c_task_a, norm_type=norm_type)
 c_task_b = normalize(c_task_b, norm_type=norm_type)
 Wij_task_dict = {"task_A": c_task_a, "task_B": c_task_b}
 
-#time series generation
+# time series generation
 
 act_type = 'syn_act'
 # generate 20 sec
-wc_params = {'inh_ext': 3, 'tau_ou': 15} #parameters for WC model, see model description below
+wc_params = {'inh_ext': 3, 'tau_ou': 15}  # parameters for WC model, see model description below
 wc_block = WCTaskSim(Wij_task_dict,
                      Wij_rest,
                      D,
-                     first_duration=6, #the duration_list of rest series before 0 onset time
+                     first_duration=6,  # the duration_list of rest series before 0 onset time
                      rest_before=True,
                      onset_time_list=[0., 4., 6.0, 8.],
-                     duration_list=2, #one number for each task (in seconds) or list of numbers corresponde to task sequence
-                     last_duration=4, #last rest duration_list 
+                     duration_list=2,
+                     # one number for each task (in seconds) or list of numbers corresponde to task sequence
+                     last_duration=4,  # last rest duration_list 
                      task_name_list=["task_A", "task_B", "task_A", "task_A"],
                      **wc_params)
 
-
-#parameters for BW model could be changed, below fixed for each ROI, see other options in `02Ex.BlockDesignOnset.ipynb`
+# parameters for BW model could be changed, below fixed for each ROI, see other options in `02Ex.BlockDesignOnset.ipynb`
 bw_param = {'rho': 0.35, 'alpha': 0.32}
 
-
 wc_block.generate_full_series(TR=1,
-                              activity=True, #if neuronal activity with low resolution should be keeped
+                              activity=True,  # if neuronal activity with low resolution should be keeped
                               a_s_rate=0.02,
                               normalize_max=2,
-                              output_activation=act_type, #series will be used for bold convolution
-                              **bw_param) #change if need individual
-#resulted BOLD
+                              output_activation=act_type,  # series will be used for bold convolution
+                              **bw_param)  # change if need individual
+# resulted BOLD
 wc_block.BOLD
-#resulted downsampled activity (if computed) saved in
+# resulted downsampled activity (if computed) saved in
 wc_block.activity[series_name]
 ```
 

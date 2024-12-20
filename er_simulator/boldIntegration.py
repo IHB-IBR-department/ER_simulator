@@ -2,8 +2,7 @@ import numpy as np
 import numba
 from typing import Optional, Union
 import numpy.typing as npt
-from tmfc_simulation.functions import resample_signal
-
+from er_simulator.functions import resample_signal
 
 
 class BWBoldModel(object):
@@ -22,8 +21,7 @@ class BWBoldModel(object):
                  k: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
                  tau: Optional[Union[float, tuple[float, float], list[float, float], npt.NDArray[np.float64]]] = None,
                  seed: Optional[Union[int, np.random.RandomState]] = None,
-                 fix: bool = False,
-                 length: int = 32):
+                 fix: bool = False):
         """
         Initialize the BWBoldModel.
 
@@ -45,7 +43,6 @@ class BWBoldModel(object):
         :type tau: Optional[Union[float, tuple[float, float], list[float, float],  npt.NDArray[np.float64]]]], optional
         """
         self.N = N
-        self.length = length
         self.dt = dt
         self.normalize_constant = normalize_constant
         self.seed = seed
@@ -61,9 +58,23 @@ class BWBoldModel(object):
         self.V_BOLD = np.ones((N,))
         # Blood volume
 
+    def reset_state(self, dt=None):
+        # initialize BOLD model variables
+        if dt is not None:
+            self.dt = dt
+        self.X_BOLD = np.zeros((self.N,))
+        # Vasso dilatory signal
+        self.F_BOLD = np.ones((self.N,))
+        # Blood flow
+        self.Q_BOLD = np.ones((self.N,))
+        # Deoxyhemoglobin
+        self.V_BOLD = np.ones((self.N,))
+        # Blood volume
+
+
     def run(self, activity):
         # Compute the BOLD signal for the chunk
-        activity = activity*self.normalize_constant
+        activity = activity * self.normalize_constant
         BOLD, self.X_BOLD, self.F_BOLD, self.Q_BOLD, self.V_BOLD = simulateBOLD(
             activity,
             self.dt,
@@ -80,11 +91,11 @@ class BWBoldModel(object):
         return BOLD
 
     def run_on_impulse(self,
-                       down_dt=0.125):
+                       down_dt=0.125,
+                       length: int = 32):
         # Create a simple test signal
         dt = self.dt
         # time length (in seconds)
-        length = self.length
         onset = 0
         duration = 10e-4
         activation = np.zeros((self.N, int(length / dt)))
@@ -95,7 +106,23 @@ class BWBoldModel(object):
 
         return resampled_BOLD, time
 
-    def save_parameters(self, filepath, s_type='mat'):
+    def get_parameters(self):
+        params = {
+            'normalize_constant': self.normalize_constant,
+            'fix': self.fix,
+            'rho': self.rho,
+            'alpha': self.alpha,
+            'gamma': self.gamma,
+            'k': self.k,
+            'tau': self.tau,
+        }
+        return params
+
+    def save_imp_with_params(self,
+                             filepath,
+                             s_type='mat',
+                             down_dt=0.125,
+                             length: int = 32):
         """Saves the model parameters rho, alpha, gamma, k, tau.
 
         :param filepath: The path to the output file.
@@ -105,13 +132,9 @@ class BWBoldModel(object):
         :raises ValueError: if ``format`` is not 'mat', 'npy', or 'rp5'
         """
 
-        params = {
-            'rho': self.rho,
-            'alpha': self.alpha,
-            'gamma': self.gamma,
-            'k': self.k,
-            'tau': self.tau,
-        }
+        params = self.get_parameters()
+        resampled_BOLD, time = self.run_on_impulse(down_dt=down_dt, length=length)
+        params['unit_impulse'] = {'time': time, 'BOLD': resampled_BOLD}
 
         if s_type == 'mat':
             import scipy.io as sio
@@ -130,20 +153,23 @@ class BWBoldModel(object):
         else:
             raise ValueError("Unsupported s_type. Choose from 'mat', 'npy', or 'hdf5'.")
 
-    def _init_parameters(self, rho, alpha, gamma, k, tau, fix=True):
+    def _init_parameters(self, rho, alpha, gamma, k, tau, fix=False):
 
+        self.fix = fix
         np.random.seed(self.seed)
+
         def process_param(param, default_mean, default_var, param_name):
             """Helper function to process parameters."""
             voxelCounts = np.ones((self.N,))
             voxelCountsSqrtInv = 1 / np.sqrt(voxelCounts)
 
             if param is not None:
-                assert isinstance(param, (float, list, tuple, np.ndarray)), \
+                assert isinstance(param, (float, dict, list, tuple, np.ndarray)), \
                     f"{param_name} must be float or list or tuple of two floats or N floats"
-
             if param is None:
                 mean, var = default_mean, default_var
+            elif isinstance(param, dict):
+                mean, var = param['value'], param['variance']
             elif isinstance(param, float):
                 mean, var = param, default_var
             elif len(param) == 2:

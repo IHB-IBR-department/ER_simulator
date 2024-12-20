@@ -1,7 +1,7 @@
 from unittest import TestCase
 import numpy as np
-from tmfc_simulation.read_utils import read_onsets_from_mat
-from tmfc_simulation.read_utils import generate_sw_matrices_from_mat
+from er_simulator.read_utils import read_onsets_from_mat
+from er_simulator.read_utils import generate_sw_matrices_from_mat
 
 
 class TestReadUtils(TestCase):

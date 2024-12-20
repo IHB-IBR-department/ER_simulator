@@ -1,8 +1,8 @@
 import numpy as np
 from unittest import TestCase
 import pytest
-from tmfc_simulation.boldIntegration import simulateBOLD
-from tmfc_simulation.boldIntegration import BWBoldModel
+from er_simulator.boldIntegration import simulateBOLD
+from er_simulator.boldIntegration import BWBoldModel
 import matplotlib.pyplot as plt
 
 
@@ -110,7 +110,7 @@ class TestBWBoldModel:
     def test_save_parameters_npy(self):
 
         file_path = 'test100.npy'
-        self.model100.save_parameters('test100.npy', s_type='npy')
+        self.model100.save_imp_with_params('test100.npy', s_type='npy')
         data = np.load(file_path, allow_pickle=True)
         assert (data.item()['rho'] == self.model100.rho).all()
         assert "alpha" in data.item().keys()
@@ -121,7 +121,7 @@ class TestBWBoldModel:
     def test_save_parameters_mat(self):
 
         from scipy import io
-        self.model100.save_parameters('test100.mat', s_type='mat')
+        self.model100.save_imp_with_params('test100.mat', s_type='mat')
         data = io.loadmat('test100.mat')
 
         assert (data['rho'] == self.model100.rho).all()
