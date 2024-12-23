@@ -1,5 +1,6 @@
 import numpy as np
 import yaml
+from scipy import io
 from typing import Optional, Union, Dict
 import numpy.typing as npt
 from er_simulator.load_wc_params import load_wc_params
@@ -8,6 +9,9 @@ from er_simulator.functions import resample_signal
 from er_simulator.boldIntegration import BWBoldModel
 from .read_utils import generate_sw_matrices_from_mat
 from .read_utils import read_onsets_from_mat
+from .task_utils import (create_task_design_activation,
+                         create_reg_activations,
+                        create_activations_per_module)
 
 
 class WCTaskSim:
@@ -528,6 +532,60 @@ class WCTaskSim:
 
         syn_act = ee * exc + ei * exc + ie * inh + ii * inh + Cmat @ exc
         return syn_act
+
+    def generate_coactivation_by_mat(self,
+                                     mat_path,
+                                     dt=50,
+                                     normalize_constant=None,
+                                     num_regions_per_modules=None):
+        """
+        Generate outer activation for each node defined with a tasks and activation info, where
+        written which model sensitive to which task. All information defined in mat file
+        with the description of  tasks, onsets, durations and activation info for each modules
+
+        Args:
+            mat_path (str): path to matfile
+            act_scaling (float): scaling factor for hrf function
+            **kwargs : kwargs for HRF class
+
+        Returns:
+
+        """
+
+        num_regions = self.num_regions
+        rest_before = self.rest_before
+        rest_after = self.rest_after
+        if dt is None:
+            dt = self.mTime
+        input_data = io.loadmat(mat_path)
+        num_tasks = input_data['onsets'].shape[1]
+        onsets_list = []
+        activations = []
+        durations_list = []
+        for i in range(num_tasks):
+            onsets_list.append(list(input_data['onsets'][0, i].squeeze()))
+            activations.append(input_data['activations'][0, i].squeeze())
+            durations_list.append(input_data["durations"][0, i].squeeze())
+
+        box_car_activations = create_task_design_activation(onsets_list,
+                                                            durations_list,
+                                                            dt=1000*dt,
+                                                            rest_before=rest_before,
+                                                            rest_after=rest_after)
+        activations_by_module = create_activations_per_module(activations,
+                                                              box_car_activations)
+        activations_by_regions = create_reg_activations(activations_by_module,
+                                                        num_regions,
+                                                        num_regions_per_modules)
+        assert isinstance(self.boldModel, BWBoldModel), "First you need to init common BW model "
+        boldModel = self.boldModel
+        boldModel.reset_state(dt)
+        BOLD = boldModel.run(activations_by_regions, normalize_constant=normalize_constant)
+        time = np.arange(self.onset_time_list[0], self.onset_time_list[-1], dt)
+        #res_BOLD, res_time = resample_signal(time, BOLD, dt, self.TR)
+        #res_activations = resample_signal(time, activations_by_regions, dt, self.TR)
+        return time, activations_by_regions, BOLD
+
 
     @staticmethod
     def _set_bold_dict(bold_params: Optional[dict]) -> dict:

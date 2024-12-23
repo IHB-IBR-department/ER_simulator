@@ -71,10 +71,12 @@ class BWBoldModel(object):
         self.V_BOLD = np.ones((self.N,))
         # Blood volume
 
-
-    def run(self, activity):
+    def run(self, activity, normalize_constant=None):
         # Compute the BOLD signal for the chunk
-        activity = activity * self.normalize_constant
+        if normalize_constant is None:
+            activity = activity * self.normalize_constant
+        else:
+            activity = activity * normalize_constant
         BOLD, self.X_BOLD, self.F_BOLD, self.Q_BOLD, self.V_BOLD = simulateBOLD(
             activity,
             self.dt,

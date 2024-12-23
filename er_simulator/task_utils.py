@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Optional, Union
+from scipy import signal
 import numpy.typing as npt
-from .wc_model import WCTaskSim
 from .functions import resample_signal
 
 
@@ -12,8 +12,8 @@ def _check_output(output_dict):
         neural_name_list.extend(["BOLD"])
     return neural_name_list
 
-def compute_bold_connectivity_TR(wc_obj: WCTaskSim, tune_time=1):
-    assert isinstance(wc_obj, WCTaskSim), "Input should be a WCTaskSim object"
+def compute_bold_connectivity_TR(wc_obj, tune_time=1):
+#    assert isinstance(wc_obj, WCTaskSim), "Input should be a WCTaskSim object"
     onset_time_list = wc_obj.onset_time_list
     task_name_list = wc_obj.task_name_list
     bold_series = wc_obj.output['BOLD_TR']
@@ -31,7 +31,7 @@ def compute_bold_connectivity_TR(wc_obj: WCTaskSim, tune_time=1):
 
 
 def compute_connectivity(wc_obj, neural_name, tune_time=1):
-    assert isinstance(wc_obj, WCTaskSim), "Input should be a WCTaskSim object"
+    #assert isinstance(wc_obj, WCTaskSim), "Input should be a WCTaskSim object"
     neural_name_list = _check_output(wc_obj.output)
     assert neural_name in neural_name_list, "Neural name should be in {}".format(neural_name_list)
     onset_time_list = wc_obj.onset_time_list
@@ -64,12 +64,25 @@ def extract_task_data(task_name, series, mtime, onset_time_list, task_name_list,
         series_list.append(series[:, start_index:end_index])
     return np.concatenate(series_list, axis=1)
 
+def compute_phase_diff(series, mtime,  srate, high_f, low_f):
+    N_ROIs = series.shape[0]
+    coeff = 1 / srate
+    roi_idx1, roi_idx2 = np.triu_indices(N_ROIs, k=1)
+    phase_diffs = np.zeros((roi_idx1.shape[0], int(len_tasks)))
+    nyquist = 1 / srate / 2
+    high_band = high_f / nyquist
+    low_band = low_f / nyquist
+    b1, a1 = signal.butter(4, [low_band, high_band], btype='bandpass')
+    filtered_data = signal.filtfilt(b1, a1, activity)
+    analytic_data = signal.hilbert(filtered_data)
+    angles = np.angle(analytic_data)
+
 
 def create_task_design_activation(onsets_list: list[list],
                                   durations_list: Union[list[float], list[list]],
                                   dt: float = 0.1,
-                                  first_rest: float = 5,
-                                  last_rest: float = 5) -> npt.NDArray:
+                                  rest_before: float = 5,
+                                  rest_after: float = 5) -> npt.NDArray:
     """
     Create external activation array separately for each task, return box car with the same size as task
 
@@ -105,8 +118,8 @@ def create_task_design_activation(onsets_list: list[list],
             durations_list[i] = [durations] * len(onsets_list[i])
     max_onset = np.max([np.max(onsets) for onsets in onsets_list])
     max_duration = durations_list[task_max_onset][-1]
-    length = int((max_onset + max_duration + last_rest) * 1000 / dt)
-    length_first_rest = int(first_rest * 1000 / dt)
+    length = int((max_onset + max_duration + rest_after) * 1000 / dt)
+    length_first_rest = int(rest_before * 1000 / dt)
     activation = np.zeros((n_tasks, length))
 
     for i, onsets in enumerate(onsets_list):

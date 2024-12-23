@@ -79,6 +79,14 @@ class TestWCTaskSimBasic:
         sim = WCTaskSim.from_config(config_file="../usage_examples/config_02_EVENT.yaml")
         #sim.generate_full_series(compute_bold=True)
         assert isinstance(sim, WCTaskSim)
+    def test_generate_coactivation_by_mat(self):
+        sim = WCTaskSim.from_config(config_file="../usage_examples/config_02_EVENT.yaml")
+        sim.boldModel = BWBoldModel(sim.num_regions, sim.wc_params['dt'] * 1e-03, **sim.bold_params)
+        mat_path = "../data/small_02_EVENT_[2s_TR]_[1s_DUR]_[6s_ISI]_[100_TRIALS].mat"
+        time, activations, BOLD = sim.generate_coactivation_by_mat(mat_path, dt=50e-3, normalize_constant=1)
+        plt.plot(time, BOLD[1, :], label='Co-activations for modules 1 and 3');
+        plt.show()
+        assert True
 
     def test_complete_onsets_with_rest_empty_input(self):
         sim = WCTaskSim(self.wc_params, rest_before=3, rest_after=3)  # Pass wc_params to the constructor

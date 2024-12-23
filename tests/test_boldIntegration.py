@@ -4,7 +4,7 @@ import pytest
 from er_simulator.boldIntegration import simulateBOLD
 from er_simulator.boldIntegration import BWBoldModel
 import matplotlib.pyplot as plt
-
+from er_simulator.task_utils import create_task_design_activation, create_activations_per_module
 
 
 class TestBWBoldModel:
@@ -15,7 +15,6 @@ class TestBWBoldModel:
         self.model = BWBoldModel(1, self.dt, fix=True)
         self.model_random = BWBoldModel(1, self.dt, fix=False)
         self.model100 = BWBoldModel(100, self.dt, fix=False)
-
 
     def test_init_fix(self):
 
@@ -32,10 +31,10 @@ class TestBWBoldModel:
     def test_init_random(self):
 
         assert self.model_random.N == 1
-        assert 0.34-4*np.sqrt(0.0024) <= self.model_random.rho <= 0.34+4*np.sqrt(0.0024)
-        assert 0.32-4*np.sqrt(0.0015) <= self.model_random.alpha <= 0.32+4*np.sqrt(0.0015)
-        assert 0.65-4*np.sqrt(0.015) <= self.model_random.k <= 0.65+4*np.sqrt(0.015)
-        assert 0.98-4*np.sqrt(0.0568) <= self.model_random.tau <= 0.98+4*np.sqrt(0.0568)
+        assert 0.34 - 4 * np.sqrt(0.0024) <= self.model_random.rho <= 0.34 + 4 * np.sqrt(0.0024)
+        assert 0.32 - 4 * np.sqrt(0.0015) <= self.model_random.alpha <= 0.32 + 4 * np.sqrt(0.0015)
+        assert 0.65 - 4 * np.sqrt(0.015) <= self.model_random.k <= 0.65 + 4 * np.sqrt(0.015)
+        assert 0.98 - 4 * np.sqrt(0.0568) <= self.model_random.tau <= 0.98 + 4 * np.sqrt(0.0568)
         assert self.model_random.X_BOLD == 0.
         assert self.model_random.V_BOLD == 1.
         assert self.model_random.Q_BOLD == 1.
@@ -70,9 +69,8 @@ class TestBWBoldModel:
             plt.show()
 
         # Basic checks:
-        assert BOLD.size == int(length/dt)
+        assert BOLD.size == int(length / dt)
         assert BOLD[0][0] == 0
-
 
     def test_run_BOLD_impulse_100_node(self):
         # Create a simple test signal
@@ -91,7 +89,7 @@ class TestBWBoldModel:
             plt.show()
 
         # Basic checks:
-        assert BOLD.shape == (100, int(length/dt))
+        assert BOLD.shape == (100, int(length / dt))
         assert (np.argmax(BOLD, axis=1) > 2000).all()
         assert (np.argmax(BOLD, axis=1) < 10000).all()
 
@@ -100,12 +98,11 @@ class TestBWBoldModel:
         BOLD, time = self.model100.run_on_impulse()
         plot = True
         if plot:
-            plt.plot(time,BOLD.T)
+            plt.plot(time, BOLD.T)
             plt.show()
-        assert BOLD.shape == (100, int(self.model100.length/self.model100.dt))
+        assert BOLD.shape == (100, int(self.model100.length / self.model100.dt))
         assert (np.argmax(BOLD, axis=1) > 2000).all()
         assert (np.argmax(BOLD, axis=1) < 10000).all()
-
 
     def test_save_parameters_npy(self):
 
@@ -117,6 +114,32 @@ class TestBWBoldModel:
         assert "tau" in data.item().keys()
         assert "gamma" in data.item().keys()
 
+    def test_run_bold_on_coactivation(self):
+        onsets_list = [[10, 40, 60],
+                       [20, 50, 70]]
+        duration_list = [5, 5]
+        box_car_activations = create_task_design_activation(
+            onsets_list,
+            duration_list,
+            dt=10)
+        #plt.plot(box_car_activations[0])
+        #plt.plot(box_car_activations[1])
+        activations = [[0, 1, 1],
+                       [1, 0, 1]]
+        activations_by_module = create_activations_per_module(activations,
+                                                              box_car_activations)
+        plt.subplot(311); plt.plot(activations_by_module[0])
+        plt.subplot(312); plt.plot(activations_by_module[1])
+        plt.subplot(313); plt.plot(activations_by_module[2])
+        plt.show()
+        model = BWBoldModel(3, dt=10e-3, fix=True, normalize_constant=1)
+        bold_activations = model.run(activations_by_module)
+        plt.plot(np.max(bold_activations)*activations_by_module[2])
+        plt.plot(bold_activations[2])
+        plt.show()
+
+
+        assert True
 
     def test_save_parameters_mat(self):
 
@@ -129,9 +152,6 @@ class TestBWBoldModel:
         assert "tau" in data.keys()
         assert "gamma" in data.keys()
         assert True
-
-
-
 
 
 class TestBold(TestCase):
@@ -151,11 +171,11 @@ class TestBold(TestCase):
         self.activation = normalize_max * self.activation
         BOLD, X, F, Q, V = simulateBOLD(self.activation,
                                         self.dt,
-                                        alpha = (0.32, 0.0015),
+                                        alpha=(0.32, 0.0015),
                                         rho=(0.34, 0.0024),
                                         tau=(0.98, 0.0568),
                                         gamma=(0.41, 0.002),
-                                        k = (0.65, 0.015),
+                                        k=(0.65, 0.015),
                                         fix=False)
         self.assertRaises(AssertionError, simulateBOLD,
                           self.activation, self.dt, rho='tt')
@@ -163,33 +183,34 @@ class TestBold(TestCase):
                           self.activation, self.dt, alpha='0.34')
 
     def test_simulate_bold_fix(self):
-
         voxel_counts = 10000 * np.ones((self.N,))
         BOLD, X, F, Q, V = simulateBOLD(self.activation,
-                            self.dt,
-                            fix=True)
+                                        self.dt,
+                                        fix=True)
         plt.subplot(121);
         plt.plot(self.activation[0, :])
         plt.subplot(122);
         plt.plot(BOLD.T)
         plt.show()
         self.assertTrue(True)
+
     def test_simulate_bold_random(self):
-        normalize_max=1.0
-        self.activation= normalize_max * self.activation
+        normalize_max = 1.0
+        self.activation = normalize_max * self.activation
         BOLD, X, F, Q, V = simulateBOLD(self.activation,
-                            self.dt,
-                            fix=False)
-        time = np.linspace(0,self.length, int(self.length/self.dt))
+                                        self.dt,
+                                        fix=False)
+        time = np.linspace(0, self.length, int(self.length / self.dt))
         time_to_peaks = [time[np.argmax(BOLD[i])] for i in range(self.N)]
-        plt.figure(figsize=(12,4))
+        plt.figure(figsize=(12, 4))
         plt.subplot(121);
-        plt.plot(time, BOLD.T); plt.title('Bold response for different nodes')
+        plt.plot(time, BOLD.T);
+        plt.title('Bold response for different nodes')
         plt.subplot(122);
-        plt.hist(time_to_peaks); plt.title('Time to peak distribution')
+        plt.hist(time_to_peaks);
+        plt.title('Time to peak distribution')
         plt.show()
         self.assertTrue(True)
-
 
     def test_simulate_bold_all_different(self):
         normalize_max = 1.0
@@ -213,4 +234,3 @@ class TestBold(TestCase):
         plt.title('Time to peak distribution')
         plt.show()
         self.assertTrue(True)
-
