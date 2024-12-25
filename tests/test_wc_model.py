@@ -463,3 +463,22 @@ class TestWCTaskSimFull:
             plt.show()
 
         assert wc_block.output['syn_act'].shape[0] == 30
+
+
+    def test_generate_only_rest_after_task(self):
+        rest_before = 20
+        wc_sim = WCTaskSim(C_rest=self.C_rest,
+                             C_task_dict=self.C_task_dict,
+                             D=self.D,
+                             rest_before=rest_before,
+                             rest_after=10,
+                             onset_time_list=[0.01, 3.76, 6.01, 8.13],
+                             duration_list=[1, 1.5, 1, 1],
+                             chunksize=3,
+                             task_name_list=["task_A", "task_B", "task_A", "task_B"],
+                             )
+        wc_sim.generate_full_series(compute_bold=True)
+        output_task = wc_sim.output.copy()
+        output_rest = wc_sim.generate_rest_series(compute_bold=True, rest_duration=30)
+
+        assert True

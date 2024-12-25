@@ -11,7 +11,7 @@ from .read_utils import generate_sw_matrices_from_mat
 from .read_utils import read_onsets_from_mat
 from .task_utils import (create_task_design_activation,
                          create_reg_activations,
-                        create_activations_per_module)
+                         create_activations_per_module)
 
 
 class WCTaskSim:
@@ -76,14 +76,12 @@ class WCTaskSim:
         self.bold_params = self._set_bold_dict(bold_params)
         self.seed = seed
 
-        self.boldModel = None
         self.compute_bold = None
 
         self.inits: Dict[str, Optional[Union[float, npt.NDArray[np.float64]]]] = {}
         for init_var in self.init_vars:
             self.inits[init_var] = None
         # time in ms
-        self.inits["last_t"] = 0
         self.delay_matrix = D
         self.rest_duration = rest_duration
         self._init_simulation(D,
@@ -94,10 +92,11 @@ class WCTaskSim:
                               duration_list,
                               rest_before,
                               rest_after,
+                              rest_duration,
                               TR,
                               fMRI_T,
                               chunksize)
-        self.inits["last_t"] = self.onset_time_list[0] * 1000
+        self.boldModel = BWBoldModel(self.num_regions, self.wc_params['dt'] * 1e-03, **self.bold_params)
         self.config_file = None
 
     @classmethod
@@ -190,6 +189,67 @@ class WCTaskSim:
         self.wc_params['lengthMat'] = D
         self.max_delay = self.getMaxDelay(D)
 
+    @property
+    def task_params(self):
+        task_params = {}
+        task_params["onset_time_list"] = self.onset_time_list
+        task_params["C_rest"] = self.C_rest
+        task_params["C_task_dict"] = self.C_task_dict
+        task_params["D"] = self.delay_matrix
+        task_params["task_name_list"] = self.task_name_list
+        task_params["duration_list"] = self.duration_list
+        task_params["rest_before"] = self.rest_before
+        task_params["rest_after"] = self.rest_after
+        return task_params
+
+    @task_params.setter
+    def task_params(self,
+                   task_params):
+        task_params_keys = ["C_rest", "C_task_dict", "D", "onset_time_list", "task_name_list", "duration_list",
+                            "rest_before", "rest_duration", "rest_after", "TR", "fMRI_T", "chunksize"]
+
+        for key in task_params_keys:
+            if key not in task_params:
+                if key == "D":
+                    task_params[key] = self.delay_matrix
+                else:
+                    task_params[key] = getattr(self, key)
+
+        upd_task_params = {k: v for k, v in task_params.items() if k in task_params_keys}
+        if "rest_completed" in task_params.keys():
+            upd_task_params["rest_completed"] = task_params["rest_completed"]
+
+
+        self._init_simulation(**task_params)
+
+    def generate_rest_series(self, keep_task_params=True, rest_duration=None, compute_bold=True):
+        """Generate only rest series and save output to dict, rewrite all outputs
+
+        :param keep_task_params:
+        :param rest_duration:
+        :param compute_bold:
+        :return:
+        """
+
+        if keep_task_params:
+            task_params = self.task_params
+            task_params["rest_completed"] = True
+        if rest_duration is None:
+            rest_duration = self.rest_duration
+        rest_params = {"onset_time_list": None, "task_name_list": None, "rest_duration": rest_duration}
+        self.task_params = rest_params
+        self.generate_full_series(compute_bold=compute_bold)
+        if keep_task_params:
+            output = self.output.copy()
+            self.task_params = task_params
+            return output
+        else:
+            return self.output
+
+
+
+
+
     def _init_simulation(self,
                          D,
                          C_rest: npt.NDArray[np.float64],
@@ -199,9 +259,11 @@ class WCTaskSim:
                          duration_list: Union[list, float] = 3,
                          rest_before: float = 6,
                          rest_after: float = 6,
+                         rest_duration: float = 900,
                          TR=2,
                          fMRI_T=16,
-                         chunksize=2):
+                         chunksize=2,
+                         rest_completed=False):
         """
         Initialize task dependent simulation with Wilson-Cowan model. So,
         in this case coupling matrix changes with the time. If you need to simulate only rest,
@@ -226,6 +288,7 @@ class WCTaskSim:
         self.C_rest = C_rest
         self.rest_before = rest_before
         self.rest_after = rest_after
+        self.rest_duration = rest_duration
         self.TR = TR
         self.fMRI_T = fMRI_T
         self.mTime = TR / fMRI_T  #microtimebin in seconds
@@ -237,7 +300,7 @@ class WCTaskSim:
             assert task_name_list is None, "No task matrix, task name list should be None"
             assert isinstance(duration_list, (float, int)), "duration_list should be a float for only rest generation"
         else:
-            unique_tasks = np.unique(task_name_list)
+            unique_tasks = list(set(np.unique(task_name_list))-{'Rest'})
             assert all(task in C_task_dict for task in unique_tasks) or (task_name_list is None), \
                 "All task names must be keys in C_task_dict"
 
@@ -245,8 +308,8 @@ class WCTaskSim:
             if task_name_list is not None:
                 duration_list = [duration_list] * len(task_name_list)
 
-
-        onset_time_list, task_name_list = self.complete_onsets_with_rest(onset_time_list,
+        if not rest_completed:
+            onset_time_list, task_name_list = self.complete_onsets_with_rest(onset_time_list,
                                                                          task_name_list,
                                                                          duration_list,
                                                                          rest_before=self.rest_before,
@@ -258,6 +321,12 @@ class WCTaskSim:
         self.duration_list = duration_list
         self.C_task_dict = C_task_dict
 
+        for init_var in self.init_vars:
+            self.inits[init_var] = None
+        for key in self.output.keys():
+            self.output[key] = None
+        self.inits["last_t"] = self.onset_time_list[0] * 1000
+
     def generate_full_series(self,
                              compute_bold: bool = True):
         """
@@ -265,15 +334,15 @@ class WCTaskSim:
         :param compute_bold:
         :return:
         """
-        #clear all outputs
+        #clear all outputs and inits
+        for init_var in self.init_vars:
+            self.inits[init_var] = None
         for key in self.output.keys():
             self.output[key] = None
 
         lastT = self.onset_time_list[0]
 
         self.compute_bold = compute_bold
-        if compute_bold:
-            self.boldModel = BWBoldModel(self.num_regions, self.wc_params['dt'] * 1e-03, **self.bold_params)
 
         while self.onset_time_list[-1] >= lastT + 1e-6:
             out_dict = self._generate_chunk_with_onsets(start_time=lastT)
@@ -349,8 +418,6 @@ class WCTaskSim:
                                                         last_time=last_t / 1000)
 
         if self.compute_bold:
-            if self.boldModel is None:
-                self.boldModel = BWBoldModel(self.num_regions, self.wc_params['dt'] * 1e-03, **self.bold_params)
 
             if self.output_type == "exc":
                 activation = excs
@@ -485,7 +552,7 @@ class WCTaskSim:
             updated_task_name_list.append(task_name_list[-1])
             if rest_after > 0:
                 updated_onset_time_list.extend([onset_time_list[-1] + duration_list[-1],
-                                                    onset_time_list[-1] + duration_list[-1] + rest_after])
+                                                onset_time_list[-1] + duration_list[-1] + rest_after])
                 updated_task_name_list.append('Rest')
             else:
                 updated_onset_time_list.append(onset_time_list[-1] + duration_list[-1])
@@ -569,7 +636,7 @@ class WCTaskSim:
 
         box_car_activations = create_task_design_activation(onsets_list,
                                                             durations_list,
-                                                            dt=1000*dt,
+                                                            dt=1000 * dt,
                                                             rest_before=rest_before,
                                                             rest_after=rest_after)
         activations_by_module = create_activations_per_module(activations,
@@ -585,7 +652,6 @@ class WCTaskSim:
         #res_BOLD, res_time = resample_signal(time, BOLD, dt, self.TR)
         #res_activations = resample_signal(time, activations_by_regions, dt, self.TR)
         return time, activations_by_regions, BOLD
-
 
     @staticmethod
     def _set_bold_dict(bold_params: Optional[dict]) -> dict:
