@@ -6,8 +6,10 @@ from er_simulator.load_wc_params import load_wc_params
 from er_simulator.functions import resample_signal
 from er_simulator.boldIntegration import BWBoldModel
 from er_simulator.synaptic_weights_matrices import normalize, generate_synaptic_weights_matrices
+from er_simulator.read_utils import get_project_root
 import numpy as np
 from matplotlib import pyplot as plt
+import os
 
 class TestWCTaskSimBasic:
 
@@ -16,7 +18,8 @@ class TestWCTaskSimBasic:
         """Sets up default parameters for WCTaskSim tests."""
 
         # Use load_wc_params to load default parameters or provide a test YAML
-        self.wc_params = load_wc_params(config_file="../er_simulator/wc_params.yaml")  # Replace with your config
+        self.wc_params = load_wc_params(
+            config_file=os.path.join(get_project_root(), "er_simulator/wc_params.yaml")) # Replace with your config
 
         # Create a dummy Cmat and Dmat if needed
         N = 3  # Example number of nodes
@@ -59,7 +62,8 @@ class TestWCTaskSimBasic:
                          [0.78922074, 0., 0.18792139],
                          [0.26950525, 0.49619214, 0.]])
         D = 250 * np.ones((N, N))
-        wc_params = load_wc_params(config_file="../er_simulator/wc_params.yaml")
+        wc_params = load_wc_params(
+            config_file=os.path.join(get_project_root(), "er_simulator/wc_params.yaml"))
         sim = WCTaskSim(wc_params,
                         C_rest=Cmat,
                         D=D,
@@ -76,14 +80,19 @@ class TestWCTaskSimBasic:
         return sim
 
     def test_init_from_config(self):
-        sim = WCTaskSim.from_config(config_file="../usage_examples/config_02_EVENT.yaml")
+        sim = WCTaskSim.from_config(
+            config_file=os.path.join(get_project_root(), "usage_examples/config_02_EVENT.yaml"))
         #sim.generate_full_series(compute_bold=True)
         assert isinstance(sim, WCTaskSim)
+
     def test_generate_coactivation_by_mat(self):
-        sim = WCTaskSim.from_config(config_file="../usage_examples/config_02_EVENT.yaml")
+        sim = WCTaskSim.from_config(
+            config_file=os.path.join(get_project_root(), "usage_examples/config_02_EVENT.yaml"))
+        
         sim.boldModel = BWBoldModel(sim.num_regions, sim.wc_params['dt'] * 1e-03, **sim.bold_params)
-        mat_path = "../data/small_02_EVENT_[2s_TR]_[1s_DUR]_[6s_ISI]_[100_TRIALS].mat"
+        mat_path = os.path.join(get_project_root(), "data/02_EVENT_[2s_TR]_[1s_DUR]_[6s_ISI]_[100_TRIALS].mat")
         time, activations, BOLD = sim.generate_coactivation_by_mat(mat_path, dt=50e-3, normalize_constant=1)
+        
         plt.plot(time, BOLD[1, :], label='Co-activations for modules 1 and 3');
         plt.show()
         assert True
