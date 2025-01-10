@@ -316,6 +316,7 @@ class WCTaskSim:
                                                                          rest_after=self.rest_after,
                                                                          rest_duration=self.rest_duration
                                                                          )
+        onset_time_list = [np.double(i) for i in onset_time_list]
         self.onset_time_list = onset_time_list
         self.task_name_list = task_name_list
         self.duration_list = duration_list
