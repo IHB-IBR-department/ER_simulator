@@ -40,6 +40,7 @@ class WCTaskSim:
                  fMRI_T=16,
                  chunksize=2,
                  output_type="syn_act",
+                 mat_path=None
                  ):
         """
         Parameters
@@ -75,6 +76,7 @@ class WCTaskSim:
         self.wc_params = self._set_wc_params_dict(wc_params)
         self.bold_params = self._set_bold_dict(bold_params)
         self.seed = seed
+        self.mat_path = mat_path
 
         self.compute_bold = None
 
@@ -97,7 +99,7 @@ class WCTaskSim:
                               fMRI_T,
                               chunksize)
         self.boldModel = BWBoldModel(self.num_regions, self.wc_params['dt'] * 1e-03, **self.bold_params)
-        self.config_file = None
+        self.config = None
 
     @classmethod
     def from_config(cls, config_file):
@@ -112,6 +114,7 @@ class WCTaskSim:
         """
         with open(config_file, 'r') as f:
             config = yaml.safe_load(f)
+        cls.config = config
 
         wc_params = config.get("wc_params", None)
         wc_params = cls._set_wc_params_dict(wc_params)
@@ -170,7 +173,8 @@ class WCTaskSim:
                    TR=TR,
                    fMRI_T=fMRI_T,
                    chunksize=chunksize,
-                   output_type=output_type)
+                   output_type=output_type,
+                   mat_path=mat_path)
 
     @property
     def num_regions(self):
@@ -344,6 +348,8 @@ class WCTaskSim:
         lastT = self.onset_time_list[0]
 
         self.compute_bold = compute_bold
+        if compute_bold:
+            self.boldModel.reset_state()
 
         while self.onset_time_list[-1] >= lastT + 1e-6:
             out_dict = self._generate_chunk_with_onsets(start_time=lastT)
@@ -646,10 +652,13 @@ class WCTaskSim:
                                                         num_regions,
                                                         num_regions_per_modules)
         assert isinstance(self.boldModel, BWBoldModel), "First you need to init common BW model "
+
         boldModel = self.boldModel
+        old_dt = boldModel.dt
         boldModel.reset_state(dt)
         BOLD = boldModel.run(activations_by_regions, normalize_constant=normalize_constant)
         time = np.arange(self.onset_time_list[0], self.onset_time_list[-1], dt)
+        boldModel.reset_state(old_dt)
         #res_BOLD, res_time = resample_signal(time, BOLD, dt, self.TR)
         #res_activations = resample_signal(time, activations_by_regions, dt, self.TR)
         return time, activations_by_regions, BOLD

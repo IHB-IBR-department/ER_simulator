@@ -104,6 +104,12 @@ class TestBWBoldModel:
         assert (np.argmax(BOLD, axis=1) > 2000).all()
         assert (np.argmax(BOLD, axis=1) < 10000).all()
 
+    def test_set_parameters(self):
+        params = self.model100.get_parameters()
+        params["rho"] = params["rho"]+0.001
+        self.model100.set_parameters(params)
+        assert np.allclose(self.model100.rho, params["rho"])
+        assert np.allclose(self.model100.alpha, params["alpha"])
     def test_save_parameters_npy(self):
 
         file_path = 'test100.npy'
@@ -152,6 +158,12 @@ class TestBWBoldModel:
         assert "tau" in data.keys()
         assert "gamma" in data.keys()
         assert True
+
+    def test_set_parameters_from_mat(self):
+        from scipy import io
+
+        data = io.loadmat('test100.mat')
+
 
 
 class TestBold(TestCase):

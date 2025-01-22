@@ -491,3 +491,22 @@ class TestWCTaskSimFull:
         output_rest = wc_sim.generate_rest_series(compute_bold=True, rest_duration=30)
 
         assert True
+
+
+    def test_generate_bold_from_config(self):
+        file_name = "07_EVENT_2s_TR_100ms_DUR_6s_ISI_100_TRIALS_COACT_FixedHRF.yaml"
+        config_path = os.path.join(get_project_root(), "usage_examples", file_name)
+        wc_sim = WCTaskSim.from_config(config_file=config_path)
+        wc_sim.generate_full_series(compute_bold=True)
+        output_rest = wc_sim.generate_rest_series(compute_bold=True, rest_duration=20)
+        microtime = 2 / 16
+        _, _, task_BOLD_coact_MT = wc_sim.generate_coactivation_by_mat(wc_sim.mat_path, dt=microtime, normalize_constant=1)
+        rest_BOLD_oscill_MT, _ = resample_signal(output_rest['mtime'],
+                                                 output_rest["BOLD"],
+                                                 wc_sim.mTime,
+                                                 microtime)
+        plt.plot(rest_BOLD_oscill_MT[0, :])
+        plt.show()
+        assert True
+
+
