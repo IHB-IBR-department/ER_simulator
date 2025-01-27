@@ -7,3 +7,4 @@ venv/
 /.mypy_cache
 .DS_Store
 /notebooks/.DS_Store
+/__pycache__/
