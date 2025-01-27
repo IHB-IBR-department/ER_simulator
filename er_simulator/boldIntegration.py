@@ -108,6 +108,7 @@ class BWBoldModel(object):
 
         return resampled_BOLD, time
 
+    #todo convert to properties
     def get_parameters(self):
         params = {
             'normalize_constant': self.normalize_constant,
@@ -119,6 +120,29 @@ class BWBoldModel(object):
             'tau': self.tau,
         }
         return params
+
+    def set_parameters(self, params):
+        if 'normalize_constant' in params.keys():
+            self.normalize_constant = params['normalize_constant']
+        self._init_parameters(params['rho'],
+                              params['alpha'],
+                              params['gamma'],
+                              params['k'],
+                              params['tau'],
+                              params['fix'])
+
+    def set_parameters_from_mat(self, hrf_path):
+        from scipy import io
+        hrf_data = io.loadmat(hrf_path)
+        params = {"rho": hrf_data['rho'].squeeze(),
+                  "alpha": hrf_data['alpha'].squeeze(),
+                  "gamma": hrf_data['gamma'].squeeze(),
+                  "k": hrf_data['k'].squeeze(),
+                  "tau": hrf_data['tau'].squeeze(),
+                  "fix": True,
+                  "normalize_constant": hrf_data['normalize_constant']}
+        self.set_parameters(params)
+
 
     def save_imp_with_params(self,
                              filepath,

@@ -2,6 +2,10 @@ from scipy import io
 from .synaptic_weights_matrices import normalize
 from .synaptic_weights_matrices import generate_synaptic_weights_matrices
 from typing import Optional
+from pathlib import Path
+
+def get_project_root() -> Path:
+    return Path(__file__).parent.parent
 
 
 def read_onsets_from_mat(mat_path: str) -> tuple[list, list, list]:
