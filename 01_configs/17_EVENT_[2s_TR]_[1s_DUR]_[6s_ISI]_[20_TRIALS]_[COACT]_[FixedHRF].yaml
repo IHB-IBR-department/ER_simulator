@@ -1,0 +1,74 @@
+
+weight_matrix:
+  mat_path: "../02_designs/17_EVENT_[2s_TR]_[1s_DUR]_[6s_ISI]_[20_TRIALS]_[COACT].mat"
+  npy_path: null
+  num_regions: 100
+  sigma: 0.1
+  num_modules: 4
+  num_regions_per_modules: null
+  norm_type: "cols"
+  gen_type: "simple_prod"
+
+sym_parameters:
+  output_type: 'syn_act'
+  delay: 250
+  rest_before: 12
+  rest_after: 10
+  rest_duration: 900 #in seconds
+  chunksize: 2
+  TR: 2
+  fMRI_T: 400 # High resolution 5*1e-3 = 5 ms (used for PLV and gamma-band envelope calculation)
+
+wc_params:
+  dt: 0.1
+  exc_ext: 0.758
+  K_gl: 2.63
+  inh_ext: 0
+  a_exc: 1.5
+  a_inh: 1.5
+  c_excexc: 16
+  c_excinh: 15
+  c_inhexc: 12
+  c_inhinh: 3
+  mu_exc: 3
+  mu_inh: 3
+  tau_exc: 2.5
+  tau_inh: 3.75
+  tau_ou: 5.0  # ms timescale of the Ornstein-Uhlenbeck noise process
+  sigma_ou: 0.0035 # noise intensity
+  exc_ou_mean: 0.0  # mean of OU process for excitatory input
+  inh_ou_mean: 0.0  # mean of OU process for inhibitory input
+  signalV: 10
+
+
+
+bold_params:
+  k:
+    value: 0.65
+    variance: 0.015
+  gamma:
+    value: 0.41
+    variance: 0.008  # 0.002 * 4
+  tau:
+    value: 0.98 # for fixed HRF
+    variance: 0.2272  # 0.0568 * 4
+  alpha:
+    value: 0.32
+    variance: 0.006  # 0.0015 * 4
+  rho:
+    value: 0.34
+    variance: 0.0096  # 0.0024 * 4
+
+  fix: True # 1 fixed HRF
+  normalize_constant: 1 # 1 for fixed HRF
+  length: 32 #time length for saving bold (in seconds)
+
+
+
+
+
+
+
+
+
+
