@@ -7,4 +7,5 @@ venv/
 /.mypy_cache
 .DS_Store
 /notebooks/.DS_Store
+/03_results/
 /__pycache__/
