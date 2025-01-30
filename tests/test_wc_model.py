@@ -97,6 +97,7 @@ class TestWCTaskSimBasic:
         plt.show()
         assert True
 
+
     def test_complete_onsets_with_rest_empty_input(self):
         sim = WCTaskSim(self.wc_params, rest_before=3, rest_after=3)  # Pass wc_params to the constructor
         onsets, tasks = sim.complete_onsets_with_rest([], [], [],
