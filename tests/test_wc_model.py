@@ -2,6 +2,7 @@ import pytest
 import time
 import pstats
 from er_simulator.wc_model import WCTaskSim
+from er_simulator.wc_model import _process_peak, _process_hilbert
 from er_simulator.load_wc_params import load_wc_params
 from er_simulator.functions import resample_signal
 from er_simulator.boldIntegration import BWBoldModel
@@ -511,3 +512,31 @@ class TestWCTaskSimFull:
         assert True
 
 
+    def test_compute_envelope(self):
+
+        rest_before = 20
+        wc_sim = WCTaskSim(C_rest=self.C_rest,
+                           C_task_dict=self.C_task_dict,
+                           D=self.D,
+                           rest_before=rest_before,
+                           rest_after=10,
+                           onset_time_list=[0.01, 3.76, 6.01, 8.13],
+                           duration_list=[1, 1.5, 1, 1],
+                           chunksize=3,
+                           TR=2,
+                           fMRI_T=400,
+                           task_name_list=["task_A", "task_B", "task_A", "task_B"],
+                           )
+        wc_sim.generate_full_series(compute_bold=True)
+        output_task = wc_sim.output.copy()
+        microtime = 0.125
+        env_h = _process_hilbert(output_task['mtime'], output_task['syn_act'].T, wc_sim.mTime, 38, 42, microtime)
+        env_p = _process_peak(output_task['mtime'], output_task['syn_act'].T, wc_sim.mTime, 600, microtime)
+        assert env_p.shape == env_h.shape
+        assert env_p.shape[0] == output_task['syn_act'].shape[0]
+
+        env_dict = wc_sim.compute_envelope_and_resample(output_task['syn_act'], srate=wc_sim.mTime, microtime=microtime)
+
+        for k, v in env_dict.items():
+            assert env_dict[k].shape == env_h.shape
+        assert True
