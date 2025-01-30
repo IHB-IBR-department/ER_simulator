@@ -12,6 +12,7 @@ from .read_utils import read_onsets_from_mat
 from .task_utils import (create_task_design_activation,
                          create_reg_activations,
                          create_activations_per_module)
+from .envelope import envelope_hilbert, env_peak
 
 
 class WCTaskSim:
@@ -208,7 +209,7 @@ class WCTaskSim:
 
     @task_params.setter
     def task_params(self,
-                   task_params):
+                    task_params):
         task_params_keys = ["C_rest", "C_task_dict", "D", "onset_time_list", "task_name_list", "duration_list",
                             "rest_before", "rest_duration", "rest_after", "TR", "fMRI_T", "chunksize"]
 
@@ -222,7 +223,6 @@ class WCTaskSim:
         upd_task_params = {k: v for k, v in task_params.items() if k in task_params_keys}
         if "rest_completed" in task_params.keys():
             upd_task_params["rest_completed"] = task_params["rest_completed"]
-
 
         self._init_simulation(**task_params)
 
@@ -249,10 +249,6 @@ class WCTaskSim:
             return output
         else:
             return self.output
-
-
-
-
 
     def _init_simulation(self,
                          D,
@@ -304,7 +300,7 @@ class WCTaskSim:
             assert task_name_list is None, "No task matrix, task name list should be None"
             assert isinstance(duration_list, (float, int)), "duration_list should be a float for only rest generation"
         else:
-            unique_tasks = list(set(np.unique(task_name_list))-{'Rest'})
+            unique_tasks = list(set(np.unique(task_name_list)) - {'Rest'})
             assert all(task in C_task_dict for task in unique_tasks) or (task_name_list is None), \
                 "All task names must be keys in C_task_dict"
 
@@ -314,12 +310,12 @@ class WCTaskSim:
 
         if not rest_completed:
             onset_time_list, task_name_list = self.complete_onsets_with_rest(onset_time_list,
-                                                                         task_name_list,
-                                                                         duration_list,
-                                                                         rest_before=self.rest_before,
-                                                                         rest_after=self.rest_after,
-                                                                         rest_duration=self.rest_duration
-                                                                         )
+                                                                             task_name_list,
+                                                                             duration_list,
+                                                                             rest_before=self.rest_before,
+                                                                             rest_after=self.rest_after,
+                                                                             rest_duration=self.rest_duration
+                                                                             )
         onset_time_list = [np.double(i) for i in onset_time_list]
         self.onset_time_list = onset_time_list
         self.task_name_list = task_name_list
@@ -730,3 +726,34 @@ class WCTaskSim:
             if key not in wc_params:
                 wc_params[key] = wc_params_default[key]
         return {k: v for k, v in wc_params.items() if k in wc_keys}
+
+    def compute_envelope_and_resample(self,
+                                      input: Union[str, np.ndarray],
+                                      srate: float = 0.005,
+                                      microtime: float = 2 / 16):
+        if isinstance(input, str):
+            input_arr = self.output['input'].T
+        else:
+            input_arr = input.T
+
+        n_steps, _ = input_arr.shape
+        t = np.arange(0, n_steps) * srate
+
+        env_dict = {"e_hil_d2": _process_hilbert(t, input_arr, srate, 38, 42, microtime),
+                    "e_hil_d5": _process_hilbert(t, input_arr, srate, 35, 45, microtime),
+                    "e_peak_600": _process_peak(t, input_arr, srate, 600, microtime),
+                    "e_peak_1000": _process_peak(t, input_arr, srate, 1000, microtime)}
+
+        return env_dict
+
+
+def _process_hilbert(t, input_arr, srate, low_f, high_f, microtime):
+    env_h = envelope_hilbert(input_arr, srate=srate, low_f=low_f, high_f=high_f)
+    env_h_MT, _ = resample_signal(t, env_h.T, srate, microtime)
+    return env_h_MT
+
+
+def _process_peak(t, input_arr, srate, n, microtime):
+    e_peak = env_peak(input_arr, n)
+    e_peak_MT, _ = resample_signal(t, e_peak.T, srate, microtime)
+    return e_peak_MT
