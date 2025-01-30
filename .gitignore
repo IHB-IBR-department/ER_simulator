@@ -8,4 +8,13 @@ venv/
 .DS_Store
 /notebooks/.DS_Store
 /03_results/
-/__pycache__/
+tests/__pycache__
+er_simulator/__pycache__
+.venv
+.pytest_cache
+nohup.out
+main.py
+er_simulator.egg-info
+build
+dist
+data
