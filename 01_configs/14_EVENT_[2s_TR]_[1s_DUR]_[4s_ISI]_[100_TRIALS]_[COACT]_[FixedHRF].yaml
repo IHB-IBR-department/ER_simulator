@@ -13,7 +13,7 @@ sym_parameters:
   output_type: 'syn_act'
   delay: 250
   rest_before: 12
-  rest_after: 10
+  rest_after: 20
   rest_duration: 900 #in seconds
   chunksize: 2
   TR: 2
