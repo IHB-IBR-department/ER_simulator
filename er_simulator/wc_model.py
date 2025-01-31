@@ -741,6 +741,8 @@ class WCTaskSim:
 
         env_dict = {"e_hil_d2": _process_hilbert(t, input_arr, srate, 38, 42, microtime),
                     "e_hil_d5": _process_hilbert(t, input_arr, srate, 35, 45, microtime),
+                    "e_peak_100": _process_peak(t, input_arr, srate, 100, microtime),
+                    "e_peak_450": _process_peak(t, input_arr, srate, 450, microtime),
                     "e_peak_600": _process_peak(t, input_arr, srate, 600, microtime),
                     "e_peak_1000": _process_peak(t, input_arr, srate, 1000, microtime)}
 
